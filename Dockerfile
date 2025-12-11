@@ -6,6 +6,8 @@ RUN npm ci
 FROM deps AS builder
 WORKDIR /app
 COPY . .
+# Garante que a pasta public exista (mesmo se repo estiver sem arquivos estáticos)
+RUN mkdir -p public
 RUN npm run build
 
 FROM node:18-alpine AS runner
