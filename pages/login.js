@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import {
     Box,
     Card,
@@ -13,8 +14,11 @@ import {
 } from "@mui/material";
 import Layout from "../components/Layout";
 import { api } from "../lib/apiClient";
+import { useAuth } from "../lib/auth";
 
 export default function LoginPage() {
+    const router = useRouter();
+    const { login: loginWithContext } = useAuth();
     const [mode, setMode] = useState("login"); // login | register
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -27,8 +31,11 @@ export default function LoginPage() {
         e.preventDefault();
         try {
             setStatus({ type: "loading", message: "Entrando..." });
-            await api.login({ email, password });
+            const res = await loginWithContext(email, password);
             setStatus({ type: "success", message: "Login realizado" });
+            if (res?.user) {
+                router.push("/admin");
+            }
         } catch (err) {
             setStatus({
                 type: "error",
