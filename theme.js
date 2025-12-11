@@ -4,13 +4,15 @@ const theme = createTheme({
     palette: {
         mode: "light",
         primary: {
-            main: "#5B21B6",
+            main: "#0F766E", // teal profundo
+            contrastText: "#F0FDF4",
         },
         secondary: {
-            main: "#0EA5E9",
+            main: "#EA580C", // laranja queimado
+            contrastText: "#FFFBEB",
         },
         background: {
-            default: "#F8FAFC",
+            default: "#F6F8F7",
             paper: "#FFFFFF",
         },
     },
@@ -25,6 +27,7 @@ const theme = createTheme({
             styleOverrides: {
                 root: {
                     textTransform: "none",
+                    fontWeight: 700,
                 },
             },
         },
