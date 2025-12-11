@@ -144,7 +144,7 @@ export default function TriggersPage() {
         if (!file) return;
         setUploading(true);
         try {
-            const resp = await api.uploadMedia(file);
+            const resp = await api.uploadMedia(file, "trigger");
             const media = resp?.media;
             if (media?.url && media?.type) {
                 setForm((prev) => ({
