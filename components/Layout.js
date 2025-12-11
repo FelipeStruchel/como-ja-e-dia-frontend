@@ -98,7 +98,7 @@ export default function Layout({ children, title }) {
                         component="div"
                         sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: "-0.01em" }}
                     >
-                        Como Jا­ ا% Dia
+                        Como Já é dia
                     </Typography>
                     {isMobile ? (
                         <IconButton
@@ -149,7 +149,7 @@ export default function Layout({ children, title }) {
                 >
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Typography variant="subtitle1" fontWeight={700}>
-                            NavegaÇðÇœo
+                            Navegação
                         </Typography>
                         <IconButton onClick={() => toggleDrawer(false)} aria-label="Fechar menu">
                             <CloseIcon />

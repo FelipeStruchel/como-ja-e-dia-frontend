@@ -53,8 +53,7 @@ export default function ConfessionsPage() {
             <Card>
                 <CardContent>
                     <Typography variant="body1" sx={{ mb: 2 }}>
-                        Envie uma confissão anônima. Respeite o limite e aguarde o
-                        cooldown configurado no backend.
+                        Envie uma confissão anônima, é realmente anonima!
                     </Typography>
                     <Box component="form" onSubmit={handleSend}>
                         <Stack spacing={2}>
