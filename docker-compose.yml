@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  frontend:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://backend:3000}
+    ports:
+      - "3001:3001"
+    networks:
+      - bot-net
+
+networks:
+  bot-net:
+    external: true
