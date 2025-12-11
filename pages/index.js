@@ -212,10 +212,10 @@ export default function DailyPage() {
                     <Card>
                         <CardContent>
                             <Stack
-                                direction="row"
-                                alignItems="center"
+                                direction={{ xs: "column", sm: "row" }}
+                                alignItems={{ xs: "flex-start", sm: "center" }}
                                 justifyContent="space-between"
-                                sx={{ mb: 2 }}
+                                sx={{ mb: 2, gap: 1 }}
                             >
                                 <Typography variant="h6">Textos</Typography>
                                 <Chip
@@ -260,10 +260,10 @@ export default function DailyPage() {
                     <Card>
                         <CardContent>
                             <Stack
-                                direction="row"
-                                alignItems="center"
+                                direction={{ xs: "column", sm: "row" }}
+                                alignItems={{ xs: "flex-start", sm: "center" }}
                                 justifyContent="space-between"
-                                sx={{ mb: 2 }}
+                                sx={{ mb: 2, gap: 1 }}
                             >
                                 <Typography variant="h6">Mídias</Typography>
                                 <Chip

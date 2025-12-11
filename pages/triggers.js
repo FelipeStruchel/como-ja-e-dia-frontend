@@ -210,7 +210,10 @@ export default function TriggersPage() {
                                     minRows={3}
                                     helperText="Pode usar regex se matchType=regex"
                                 />
-                                <Stack direction="row" spacing={2}>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={2}
+                                >
                                     <FormControl fullWidth>
                                         <InputLabel>Tipo de match</InputLabel>
                                         <Select
@@ -240,7 +243,10 @@ export default function TriggersPage() {
                                     </FormControl>
                                 </Stack>
 
-                                <Stack direction="row" spacing={2}>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={2}
+                                >
                                     <FormControl fullWidth>
                                         <InputLabel>Tipo de resposta</InputLabel>
                                         <Select
@@ -319,7 +325,10 @@ export default function TriggersPage() {
                                     </Stack>
                                 )}
 
-                                <Stack direction="row" spacing={2}>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={2}
+                                >
                                     <TextField
                                         label="Cooldown global (s)"
                                         type="number"
@@ -344,7 +353,10 @@ export default function TriggersPage() {
                                     />
                                 </Stack>
 
-                                <Stack direction="row" spacing={2}>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={2}
+                                >
                                     <TextField
                                         label="Expira em"
                                         type="datetime-local"
@@ -364,7 +376,11 @@ export default function TriggersPage() {
                                     />
                                 </Stack>
 
-                                <Stack direction="row" spacing={2}>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={2}
+                                    sx={{ flexWrap: "wrap" }}
+                                >
                                     <FormControlLabel
                                         control={
                                             <Switch
@@ -408,8 +424,11 @@ export default function TriggersPage() {
                                         label="Palavra inteira"
                                     />
                                 </Stack>
-
-                                <Stack direction="row" spacing={2}>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={2}
+                                    sx={{ flexWrap: "wrap" }}
+                                >
                                     <FormControlLabel
                                         control={
                                             <Switch
@@ -439,8 +458,12 @@ export default function TriggersPage() {
                                         label="Ativo"
                                     />
                                 </Stack>
-                                <Stack direction="row" spacing={2}>
-                                    <Button variant="contained" onClick={handleSave}>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={2}
+                                    sx={{ alignItems: { xs: "stretch", sm: "center" } }}
+                                >
+                                    <Button variant="contained" onClick={handleSave} fullWidth>
                                         {editingId ? "Salvar alterações" : "Criar trigger"}
                                     </Button>
                                     {editingId && (
@@ -470,10 +493,10 @@ export default function TriggersPage() {
                     <Card>
                         <CardContent>
                             <Stack
-                                direction="row"
+                                direction={{ xs: "column", sm: "row" }}
                                 justifyContent="space-between"
-                                alignItems="center"
-                                sx={{ mb: 2 }}
+                                alignItems={{ xs: "flex-start", sm: "center" }}
+                                sx={{ mb: 2, gap: 1 }}
                             >
                                 <Typography variant="h6">Triggers</Typography>
                                 <Chip
@@ -493,9 +516,10 @@ export default function TriggersPage() {
                                     <Card key={t._id} variant="outlined">
                                         <CardContent>
                                             <Stack
-                                                direction="row"
+                                                direction={{ xs: "column", sm: "row" }}
                                                 justifyContent="space-between"
-                                                alignItems="center"
+                                                alignItems={{ xs: "flex-start", sm: "center" }}
+                                                sx={{ gap: 1 }}
                                             >
                                                 <Typography variant="subtitle1" fontWeight={700}>
                                                     {t.name || "(sem nome)"}
@@ -530,7 +554,16 @@ export default function TriggersPage() {
                                                 </Typography>
                                             )}
                                         </CardContent>
-                                        <CardActions sx={{ justifyContent: "flex-end" }}>
+                                        <CardActions
+                                            sx={{
+                                                justifyContent: {
+                                                    xs: "flex-start",
+                                                    sm: "flex-end",
+                                                },
+                                                flexWrap: "wrap",
+                                                gap: 1,
+                                            }}
+                                        >
                                             <Button size="small" onClick={() => handleEdit(t)}>
                                                 Editar
                                             </Button>

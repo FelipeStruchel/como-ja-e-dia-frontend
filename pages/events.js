@@ -112,10 +112,10 @@ export default function EventsPage() {
                     <Card>
                         <CardContent>
                             <Stack
-                                direction="row"
-                                alignItems="center"
+                                direction={{ xs: "column", sm: "row" }}
+                                alignItems={{ xs: "flex-start", sm: "center" }}
                                 justifyContent="space-between"
-                                sx={{ mb: 2 }}
+                                sx={{ mb: 2, gap: 1 }}
                             >
                                 <Typography variant="h6">Próximos eventos</Typography>
                                 <Chip
@@ -136,7 +136,16 @@ export default function EventsPage() {
                                                 {new Date(ev.date).toLocaleString()}
                                             </Typography>
                                         </CardContent>
-                                        <CardActions sx={{ justifyContent: "flex-end" }}>
+                                        <CardActions
+                                            sx={{
+                                                justifyContent: {
+                                                    xs: "flex-start",
+                                                    sm: "flex-end",
+                                                },
+                                                gap: 1,
+                                                flexWrap: "wrap",
+                                            }}
+                                        >
                                             <Button
                                                 color="error"
                                                 size="small"

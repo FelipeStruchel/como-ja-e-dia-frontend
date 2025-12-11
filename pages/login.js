@@ -8,6 +8,8 @@ import {
     Typography,
     Alert,
     Stack,
+    FormControl,
+    FormLabel,
 } from "@mui/material";
 import Layout from "../components/Layout";
 import { api } from "../lib/apiClient";
@@ -39,26 +41,28 @@ export default function LoginPage() {
         <Layout title="Login">
             <Card sx={{ maxWidth: 480, mx: "auto" }}>
                 <CardContent>
-                    <Typography variant="body1" sx={{ mb: 2 }}>
-                        A autenticação ainda não está exigida em nenhuma página, mas já
-                        temos login disponível.
-                    </Typography>
                     <Box component="form" onSubmit={handleLogin}>
                         <Stack spacing={2}>
-                            <TextField
-                                label="Email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                            <TextField
-                                label="Senha"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                            <FormControl>
+                                <FormLabel htmlFor="login-email">Email</FormLabel>
+                                <TextField
+                                    id="login-email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </FormControl>
+                            <FormControl>
+                                <FormLabel htmlFor="login-password">Senha</FormLabel>
+                                <TextField
+                                    id="login-password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </FormControl>
                             <Button type="submit" variant="contained" disabled={loading}>
                                 Entrar
                             </Button>

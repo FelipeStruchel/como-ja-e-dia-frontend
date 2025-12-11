@@ -87,7 +87,12 @@ export default function LogsPage() {
                             helperText="Máximo 200"
                             inputProps={{ min: 1, max: 200 }}
                         />
-                        <Stack direction="row" alignItems="center" spacing={1}>
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={1}
+                            sx={{ flexWrap: "wrap", rowGap: 0.5 }}
+                        >
                             <Switch
                                 checked={autoRefresh}
                                 onChange={(e) => setAutoRefresh(e.target.checked)}
@@ -125,10 +130,11 @@ export default function LogsPage() {
                                 }}
                             >
                                 <Stack
-                                    direction="row"
+                                    direction={{ xs: "column", sm: "row" }}
                                     justifyContent="space-between"
-                                    alignItems="center"
-                                    spacing={2}
+                                    alignItems={{ xs: "flex-start", sm: "center" }}
+                                    spacing={1}
+                                    sx={{ gap: 1 }}
                                 >
                                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
                                         {logItem.level?.toUpperCase() || "INFO"}
