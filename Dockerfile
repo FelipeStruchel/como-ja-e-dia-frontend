@@ -11,7 +11,11 @@ RUN npm run build
 FROM node:18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/package*.json ./
+# Dependências de produção
+COPY --from=deps /app/package*.json ./
+COPY --from=deps /app/node_modules ./node_modules
+
+# Artefatos de build e código
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.mjs ./next.config.mjs
