@@ -3,11 +3,13 @@ import useSWR from "swr";
 import {
     Alert,
     Box,
+    Avatar,
     Button,
     Card,
     CardActions,
     CardContent,
     Chip,
+    CircularProgress,
     Divider,
     FormControl,
     FormControlLabel,
@@ -19,6 +21,7 @@ import {
     Switch,
     TextField,
     Typography,
+    Autocomplete,
 } from "@mui/material";
 import Layout from "../components/Layout";
 import { api } from "../lib/apiClient";
@@ -41,6 +44,8 @@ const emptyForm = {
     cooldownSeconds: 0,
     cooldownPerUserSeconds: 0,
     active: true,
+    restrictByUsers: false,
+    allowedUsers: [],
 };
 
 const fetcher = () => api.getTriggers();
@@ -53,6 +58,14 @@ export default function TriggersPage() {
     const [status, setStatus] = useState({ type: "idle", message: "" });
     const [uploading, setUploading] = useState(false);
     const [sessionOk, setSessionOk] = useState(true);
+    const [contextMembers, setContextMembers] = useState([]);
+    const [contextLoading, setContextLoading] = useState(false);
+    const [contextError, setContextError] = useState("");
+    const groupId =
+        process.env.NEXT_PUBLIC_GROUP_ID ||
+        process.env.NEXT_PUBLIC_ALLOWED_PING_GROUP ||
+        process.env.NEXT_PUBLIC_GROUP ||
+        "";
 
     useEffect(() => {
         api.me()
@@ -60,6 +73,20 @@ export default function TriggersPage() {
             .catch(() => setSessionOk(false))
             .finally(() => setAuthChecked(true));
     }, []);
+
+    useEffect(() => {
+        if (!sessionOk) return;
+        if (!groupId) {
+            setContextError("Defina NEXT_PUBLIC_GROUP_ID para carregar membros do grupo.");
+            return;
+        }
+        setContextLoading(true);
+        setContextError("");
+        api.getGroupContext(groupId)
+            .then((ctx) => setContextMembers(ctx?.members || []))
+            .catch((err) => setContextError(err?.message || "Erro ao carregar contexto"))
+            .finally(() => setContextLoading(false));
+    }, [sessionOk, groupId]);
 
     const loading = !triggers && !error;
 
@@ -76,6 +103,7 @@ export default function TriggersPage() {
             cooldownSeconds: Number(form.cooldownSeconds || 0),
             cooldownPerUserSeconds: Number(form.cooldownPerUserSeconds || 0),
             chancePercent: Number(form.chancePercent || 0),
+            allowedUsers: form.restrictByUsers ? form.allowedUsers : [],
         };
     }, [form]);
 
@@ -125,6 +153,8 @@ export default function TriggersPage() {
             cooldownSeconds: trigger.cooldownSeconds ?? 0,
             cooldownPerUserSeconds: trigger.cooldownPerUserSeconds ?? 0,
             active: trigger.active ?? true,
+            restrictByUsers: (trigger.allowedUsers || []).length > 0,
+            allowedUsers: trigger.allowedUsers || [],
         });
     }
 
@@ -458,6 +488,132 @@ export default function TriggersPage() {
                                         label="Ativo"
                                     />
                                 </Stack>
+                                <Divider />
+                                <Stack spacing={1}>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={form.restrictByUsers}
+                                                onChange={(e) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        restrictByUsers: e.target.checked,
+                                                        allowedUsers: e.target.checked
+                                                            ? p.allowedUsers
+                                                            : [],
+                                                    }))
+                                                }
+                                            />
+                                        }
+                                        label="Restrito a pessoas específicas"
+                                    />
+                                    {form.restrictByUsers && (
+                                        <Stack spacing={1}>
+                                            {contextError && (
+                                                <Alert severity="warning">{contextError}</Alert>
+                                            )}
+                                            <Stack
+                                                direction="row"
+                                                spacing={1}
+                                                alignItems="center"
+                                            >
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Quem pode disparar
+                                                </Typography>
+                                                {contextLoading && (
+                                                    <CircularProgress size={16} thickness={5} />
+                                                )}
+                                                {!contextLoading && (
+                                                    <Button
+                                                        size="small"
+                                                        variant="text"
+                                                        onClick={async () => {
+                                                            try {
+                                                                setContextLoading(true);
+                                                                await api.refreshGroupContext(groupId);
+                                                                // tenta ler o contexto atual; pode ainda nÇõo ter sido processado
+                                                                try {
+                                                                    const ctx = await api.getGroupContext(groupId);
+                                                                    setContextMembers(ctx?.members || []);
+                                                                } catch (_) {
+                                                                    // se o worker ainda nÇõo salvou, mantemos a lista atual
+                                                                }
+                                                                setContextError("");
+                                                            } catch (err) {
+                                                                setContextError(
+                                                                    err?.message ||
+                                                                        "Erro ao atualizar contexto"
+                                                                );
+                                                            } finally {
+                                                                setContextLoading(false);
+                                                            }
+                                                        }}
+                                                        disabled={!groupId}
+                                                    >
+                                                        Atualizar contexto
+                                                    </Button>
+                                                )}
+                                            </Stack>
+                                            <Autocomplete
+                                                multiple
+                                                disableCloseOnSelect
+                                                options={contextMembers}
+                                                getOptionLabel={(option) =>
+                                                    option.name ||
+                                                    option.pushname ||
+                                                    option.id ||
+                                                    "Sem nome"
+                                                }
+                                                value={(form.allowedUsers || []).map((id) =>
+                                                    contextMembers.find((m) => m.id === id) || {
+                                                        id,
+                                                        name: id,
+                                                    }
+                                                )}
+                                                onChange={(_, newVal) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        allowedUsers: newVal
+                                                            .map((m) => m.id)
+                                                            .filter(Boolean),
+                                                    }))
+                                                }
+                                                renderTags={(value, getTagProps) =>
+                                                    value.map((option, index) => (
+                                                        <Chip
+                                                            {...getTagProps({ index })}
+                                                            key={option.id || option.name}
+                                                            avatar={
+                                                                <Avatar
+                                                                    src={option.profilePicUrl || ""}
+                                                                    alt={option.name || option.id}
+                                                                >
+                                                                    {(option.name ||
+                                                                        option.pushname ||
+                                                                        option.id ||
+                                                                        "?"
+                                                                    ).charAt(0)}
+                                                                </Avatar>
+                                                            }
+                                                            label={option.name || option.id}
+                                                        />
+                                                    ))
+                                                }
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        label="Selecione quem pode disparar"
+                                                        placeholder={
+                                                            contextLoading
+                                                                ? "Carregando..."
+                                                                : "Escolha membros"
+                                                        }
+                                                    />
+                                                )}
+                                            />
+                                        </Stack>
+                                    )}
+                                </Stack>
                                 <Stack
                                     direction={{ xs: "column", sm: "row" }}
                                     spacing={2}
@@ -551,6 +707,11 @@ export default function TriggersPage() {
                                                 <Typography variant="body2" color="text.secondary">
                                                     Disparos: {t.triggeredCount || 0}
                                                     {t.maxUses ? ` / ${t.maxUses}` : ""}
+                                                </Typography>
+                                            )}
+                                            {t.allowedUsers?.length > 0 && (
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Restrito para: {t.allowedUsers.length} pessoas
                                                 </Typography>
                                             )}
                                         </CardContent>
