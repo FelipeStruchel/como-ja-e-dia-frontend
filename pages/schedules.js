@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import {
     Alert,
     Autocomplete,
-    Box,
     Button,
     Card,
     CardActions,
@@ -11,7 +10,6 @@ import {
     Chip,
     FormControl,
     FormControlLabel,
-    Grid,
     InputLabel,
     MenuItem,
     Select,
@@ -19,7 +17,6 @@ import {
     Switch,
     TextField,
     Typography,
-    CircularProgress,
 } from "@mui/material";
 import Layout from "../components/Layout";
 import { api } from "../lib/apiClient";
@@ -28,7 +25,7 @@ const fetcher = () => api.getSchedules();
 
 const emptyForm = {
     name: "",
-    type: "video",
+    type: "image", // defaulta midia; o tipo final sera inferido
     mediaUrl: "",
     displayUrl: "",
     textContent: "",
@@ -54,8 +51,17 @@ const dowOptions = [
     { label: "Qua", value: 3 },
     { label: "Qui", value: 4 },
     { label: "Sex", value: 5 },
-    { label: "Sáb", value: 6 },
+    { label: "Sab", value: 6 },
 ];
+
+const inferMediaTypeFromUrl = (url = "") => {
+    const lower = url.toLowerCase();
+    const videoExt = [".mp4", ".mov", ".avi", ".mkv", ".webm"];
+    if (videoExt.some((ext) => lower.endsWith(ext))) return "video";
+    const imageExt = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
+    if (imageExt.some((ext) => lower.endsWith(ext))) return "image";
+    return "image";
+};
 
 export default function SchedulesPage() {
     const { data: schedules, mutate, error } = useSWR("/api/schedules", fetcher);
@@ -74,8 +80,13 @@ export default function SchedulesPage() {
     }, []);
 
     const parsedForm = useMemo(() => {
+        const finalType =
+            form.type === "text"
+                ? "text"
+                : inferMediaTypeFromUrl(form.mediaUrl || form.displayUrl || form.type);
         return {
             ...form,
+            type: finalType,
             startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
             endDate: form.endDate ? new Date(form.endDate).toISOString() : null,
             daysOfWeek: form.daysOfWeek || [],
@@ -109,9 +120,9 @@ export default function SchedulesPage() {
         setEditingId(s._id);
         setForm({
             name: s.name || "",
-            type: s.type || "video",
+            type: s.type || "image",
             mediaUrl: s.mediaUrl || "",
-            displayUrl: s.mediaUrl || "",
+            displayUrl: s.displayUrl || s.mediaUrl || "",
             textContent: s.textContent || "",
             captionMode: s.captionMode || "auto",
             customCaption: s.customCaption || "",
@@ -144,19 +155,19 @@ export default function SchedulesPage() {
         try {
             const resp = await api.uploadMedia(file, "daily");
             const media = resp?.media;
-            if (media?.url && media?.type) {
+            if (media?.url) {
                 setForm((prev) => ({
                     ...prev,
-                    type: media.type,
+                    type: media.type || inferMediaTypeFromUrl(media.url),
                     mediaUrl: media.url,
                     displayUrl: media.urlPublic || media.url,
                 }));
-                setStatus({ type: "success", message: "Mídia enviada, URL aplicada" });
+                setStatus({ type: "success", message: "Midia enviada, URL aplicada" });
             }
         } catch (err) {
             setStatus({
                 type: "error",
-                message: err?.message || "Erro ao enviar mídia",
+                message: err?.message || "Erro ao enviar midia",
             });
         } finally {
             setUploading(false);
@@ -167,7 +178,7 @@ export default function SchedulesPage() {
     if (!authChecked) {
         return (
             <Layout title="Agendamentos">
-                <Typography>Verificando sessão...</Typography>
+                <Typography>Verificando sessao...</Typography>
             </Layout>
         );
     }
@@ -176,13 +187,14 @@ export default function SchedulesPage() {
         return (
             <Layout title="Agendamentos">
                 <Alert severity="warning" sx={{ mb: 2 }}>
-                    É preciso estar logado. Vá para /login e faça o login.
+                    E preciso estar logado. Va para /login e faca o login.
                 </Alert>
             </Layout>
         );
     }
 
     const loading = !schedules && !error;
+    const isText = form.type === "text";
 
     return (
         <Layout title="Agendamentos">
@@ -201,46 +213,62 @@ export default function SchedulesPage() {
                                     required
                                 />
                                 <FormControl fullWidth>
-                                    <InputLabel>Tipo</InputLabel>
+                                    <InputLabel>Conteudo</InputLabel>
                                     <Select
-                                        label="Tipo"
-                                        value={form.type}
-                                        onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
+                                        label="Conteudo"
+                                        value={isText ? "text" : "media"}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === "text") {
+                                                setForm((p) => ({ ...p, type: "text" }));
+                                            } else {
+                                                setForm((p) => ({
+                                                    ...p,
+                                                    type:
+                                                        p.type === "text"
+                                                            ? inferMediaTypeFromUrl(p.mediaUrl)
+                                                            : p.type || "image",
+                                                }));
+                                            }
+                                        }}
                                     >
                                         <MenuItem value="text">Texto</MenuItem>
-                                        <MenuItem value="image">Imagem</MenuItem>
-                                        <MenuItem value="video">Vídeo</MenuItem>
+                                        <MenuItem value="media">Midia (imagem/video)</MenuItem>
                                     </Select>
                                 </FormControl>
-                                {form.type === "text" ? (
+                                {isText ? (
                                     <TextField
                                         label="Texto"
                                         multiline
                                         minRows={3}
                                         value={form.textContent}
-                                        onChange={(e) =>
-                                            setForm((p) => ({ ...p, textContent: e.target.value }))
-                                        }
+                                        onChange={(e) => setForm((p) => ({ ...p, textContent: e.target.value }))}
                                     />
                                 ) : (
                                     <Stack spacing={1}>
                                         <TextField
-                                            label="URL da mídia diária"
-                                        value={form.mediaUrl}
-                                        onChange={(e) =>
-                                            setForm((p) => ({ ...p, mediaUrl: e.target.value }))
-                                        }
-                                    />
-                                    {form.displayUrl && (
-                                        <Typography variant="body2" color="text.secondary">
-                                            Prévia pública: {form.displayUrl}
-                                        </Typography>
-                                    )}
-                                    <Button variant="outlined" component="label" disabled={uploading}>
-                                        {uploading ? "Enviando..." : "Enviar mídia (scope daily)"}
-                                        <input
-                                            type="file"
-                                            hidden
+                                            label="URL da midia diaria"
+                                            value={form.mediaUrl}
+                                            onChange={(e) => {
+                                                const url = e.target.value;
+                                                setForm((p) => ({
+                                                    ...p,
+                                                    mediaUrl: url,
+                                                    displayUrl: url,
+                                                    type: inferMediaTypeFromUrl(url),
+                                                }));
+                                            }}
+                                        />
+                                        {form.displayUrl && (
+                                            <Typography variant="body2" color="text.secondary">
+                                                Previa publica: {form.displayUrl}
+                                            </Typography>
+                                        )}
+                                        <Button variant="outlined" component="label" disabled={uploading}>
+                                            {uploading ? "Enviando..." : "Enviar midia (scope daily)"}
+                                            <input
+                                                type="file"
+                                                hidden
                                                 onChange={(e) => handleUpload(e.target.files?.[0])}
                                             />
                                         </Button>
@@ -280,7 +308,7 @@ export default function SchedulesPage() {
                                             }
                                         />
                                     }
-                                    label="Enviar intro (Foto/Vídeo do dia)"
+                                    label="Enviar intro (Foto/Video do dia)"
                                 />
                                 <FormControlLabel
                                     control={
@@ -294,7 +322,7 @@ export default function SchedulesPage() {
                                             }
                                         />
                                     }
-                                    label="Enviar item aleatório da Mensagem do Dia"
+                                    label="Enviar item aleatorio da Mensagem do Dia"
                                 />
                                 <FormControlLabel
                                     control={
@@ -308,16 +336,14 @@ export default function SchedulesPage() {
                                             }
                                         />
                                     }
-                                    label="Limpar mídia principal ao finalizar (apenas se última data)"
+                                    label="Limpar midia principal ao finalizar (apenas se ultima data)"
                                 />
                                 <TextField
                                     label="Persona (opcional, substitui a global)"
                                     multiline
                                     minRows={4}
                                     value={form.personaPrompt}
-                                    onChange={(e) =>
-                                        setForm((p) => ({ ...p, personaPrompt: e.target.value }))
-                                    }
+                                    onChange={(e) => setForm((p) => ({ ...p, personaPrompt: e.target.value }))}
                                     helperText="Guardrails fixos permanecem. Se vazio, usa persona global."
                                 />
                                 <FormControlLabel
@@ -332,12 +358,12 @@ export default function SchedulesPage() {
                                             }
                                         />
                                     }
-                                    label="Modo avançado (cron manual)"
+                                    label="Modo avancado (cron manual)"
                                 />
                                 {!form.useCronOverride ? (
                                     <>
                                         <TextField
-                                            label="Horário (HH:mm)"
+                                            label="Horario (HH:mm)"
                                             type="time"
                                             InputLabelProps={{ shrink: true }}
                                             value={form.time}
@@ -373,38 +399,32 @@ export default function SchedulesPage() {
                                 )}
                                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                                     <TextField
-                                        label="Início (opcional)"
+                                        label="Inicio (opcional)"
                                         type="datetime-local"
                                         InputLabelProps={{ shrink: true }}
                                         value={form.startDate}
-                                        onChange={(e) =>
-                                            setForm((p) => ({ ...p, startDate: e.target.value }))
-                                        }
+                                        onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))}
                                     />
                                     <TextField
                                         label="Fim (opcional)"
                                         type="datetime-local"
                                         InputLabelProps={{ shrink: true }}
                                         value={form.endDate}
-                                        onChange={(e) =>
-                                            setForm((p) => ({ ...p, endDate: e.target.value }))
-                                        }
+                                        onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))}
                                     />
                                 </Stack>
                                 <FormControlLabel
                                     control={
                                         <Switch
                                             checked={form.active}
-                                            onChange={(e) =>
-                                                setForm((p) => ({ ...p, active: e.target.checked }))
-                                            }
+                                            onChange={(e) => setForm((p) => ({ ...p, active: e.target.checked }))}
                                         />
                                     }
                                     label="Ativo"
                                 />
                                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                                     <Button variant="contained" onClick={handleSave} fullWidth>
-                                        {editingId ? "Salvar alterações" : "Criar agendamento"}
+                                        {editingId ? "Salvar alteracoes" : "Criar agendamento"}
                                     </Button>
                                     {editingId && (
                                         <Button
@@ -414,7 +434,7 @@ export default function SchedulesPage() {
                                                 setForm(emptyForm);
                                             }}
                                         >
-                                            Cancelar edição
+                                            Cancelar edicao
                                         </Button>
                                     )}
                                 </Stack>
@@ -445,9 +465,7 @@ export default function SchedulesPage() {
                                         onClick={() =>
                                             api
                                                 .resyncSchedules()
-                                                .then(() =>
-                                                    setStatus({ type: "success", message: "Resync solicitado" })
-                                                )
+                                                .then(() => setStatus({ type: "success", message: "Resync solicitado" }))
                                                 .catch((err) =>
                                                     setStatus({
                                                         type: "error",
@@ -485,7 +503,7 @@ export default function SchedulesPage() {
                                                 Tipo: {s.type} | Cron: {s.cron} | TZ: {s.timezone}
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                Random do dia: {s.includeRandomPool !== false ? "Sim" : "Não"}
+                                                Random do dia: {s.includeRandomPool !== false ? "Sim" : "Nao"}
                                             </Typography>
                                             {s.captionMode !== "none" && (
                                                 <Typography variant="body2" color="text.secondary">
@@ -506,11 +524,7 @@ export default function SchedulesPage() {
                                             <Button size="small" onClick={() => handleEdit(s)}>
                                                 Editar
                                             </Button>
-                                            <Button
-                                                size="small"
-                                                color="error"
-                                                onClick={() => handleDelete(s._id)}
-                                            >
+                                            <Button size="small" color="error" onClick={() => handleDelete(s._id)}>
                                                 Remover
                                             </Button>
                                         </CardActions>
