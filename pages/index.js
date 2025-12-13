@@ -30,6 +30,7 @@ const fetcher = (key) => {
 function getFilename(item) {
     if (item?.fileName) return item.fileName;
     if (item?.path) return item.path.split("/").pop();
+    if (item?.urlPublic) return item.urlPublic.split("/").pop();
     if (item?.url) return item.url.split("/").pop();
     return "";
 }
@@ -276,7 +277,7 @@ export default function DailyPage() {
                             <Grid container spacing={2}>
                                 {(media || []).map((item) => {
                                     const filename = getFilename(item);
-                                    const url = item.url || item.path || "";
+                                    const url = item.urlPublic || item.url || item.path || "";
                                     const isImage = item.type === "image";
                                     return (
                                         <Grid item xs={12} sm={6} md={4} key={filename}>
