@@ -30,6 +30,7 @@ const emptyForm = {
     name: "",
     type: "video",
     mediaUrl: "",
+    displayUrl: "",
     textContent: "",
     captionMode: "auto",
     customCaption: "",
@@ -110,6 +111,7 @@ export default function SchedulesPage() {
             name: s.name || "",
             type: s.type || "video",
             mediaUrl: s.mediaUrl || "",
+            displayUrl: s.mediaUrl || "",
             textContent: s.textContent || "",
             captionMode: s.captionMode || "auto",
             customCaption: s.customCaption || "",
@@ -147,6 +149,7 @@ export default function SchedulesPage() {
                     ...prev,
                     type: media.type,
                     mediaUrl: media.url,
+                    displayUrl: media.urlPublic || media.url,
                 }));
                 setStatus({ type: "success", message: "Mídia enviada, URL aplicada" });
             }
@@ -223,16 +226,21 @@ export default function SchedulesPage() {
                                     <Stack spacing={1}>
                                         <TextField
                                             label="URL da mídia diária"
-                                            value={form.mediaUrl}
-                                            onChange={(e) =>
-                                                setForm((p) => ({ ...p, mediaUrl: e.target.value }))
-                                            }
-                                        />
-                                        <Button variant="outlined" component="label" disabled={uploading}>
-                                            {uploading ? "Enviando..." : "Enviar mídia (scope daily)"}
-                                            <input
-                                                type="file"
-                                                hidden
+                                        value={form.mediaUrl}
+                                        onChange={(e) =>
+                                            setForm((p) => ({ ...p, mediaUrl: e.target.value }))
+                                        }
+                                    />
+                                    {form.displayUrl && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Prévia pública: {form.displayUrl}
+                                        </Typography>
+                                    )}
+                                    <Button variant="outlined" component="label" disabled={uploading}>
+                                        {uploading ? "Enviando..." : "Enviar mídia (scope daily)"}
+                                        <input
+                                            type="file"
+                                            hidden
                                                 onChange={(e) => handleUpload(e.target.files?.[0])}
                                             />
                                         </Button>
