@@ -77,14 +77,18 @@ export default function TriggersPage() {
     useEffect(() => {
         if (!sessionOk) return;
         if (!groupId) {
-            setContextError("Defina NEXT_PUBLIC_GROUP_ID para carregar membros do grupo.");
+            setContextError(
+                "Defina NEXT_PUBLIC_GROUP_ID para carregar membros do grupo."
+            );
             return;
         }
         setContextLoading(true);
         setContextError("");
         api.getGroupContext(groupId)
             .then((ctx) => setContextMembers(ctx?.members || []))
-            .catch((err) => setContextError(err?.message || "Erro ao carregar contexto"))
+            .catch((err) =>
+                setContextError(err?.message || "Erro ao carregar contexto")
+            )
             .finally(() => setContextLoading(false));
     }, [sessionOk, groupId]);
 
@@ -99,7 +103,9 @@ export default function TriggersPage() {
             ...form,
             phrases: phrasesArr,
             maxUses: form.maxUses ? Number(form.maxUses) : null,
-            expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+            expiresAt: form.expiresAt
+                ? new Date(form.expiresAt).toISOString()
+                : null,
             cooldownSeconds: Number(form.cooldownSeconds || 0),
             cooldownPerUserSeconds: Number(form.cooldownPerUserSeconds || 0),
             chancePercent: Number(form.chancePercent || 0),
@@ -138,7 +144,9 @@ export default function TriggersPage() {
             matchType: trigger.matchType || "exact",
             caseSensitive: !!trigger.caseSensitive,
             normalizeAccents:
-                trigger.normalizeAccents === undefined ? true : !!trigger.normalizeAccents,
+                trigger.normalizeAccents === undefined
+                    ? true
+                    : !!trigger.normalizeAccents,
             wholeWord: !!trigger.wholeWord,
             responseType: trigger.responseType || "text",
             responseText: trigger.responseText || "",
@@ -182,7 +190,10 @@ export default function TriggersPage() {
                     responseType: media.type === "text" ? "text" : media.type,
                     responseMediaUrl: media.url,
                 }));
-                setStatus({ type: "success", message: "Mídia enviada, URL aplicada" });
+                setStatus({
+                    type: "success",
+                    message: "Mídia enviada, URL aplicada",
+                });
             }
         } catch (err) {
             setStatus({
@@ -222,19 +233,29 @@ export default function TriggersPage() {
                             <Typography variant="h6" gutterBottom>
                                 {editingId ? "Editar trigger" : "Nova trigger"}
                             </Typography>
-                            <Stack spacing={2} component="form" onSubmit={handleSave}>
+                            <Stack
+                                spacing={2}
+                                component="form"
+                                onSubmit={handleSave}
+                            >
                                 <TextField
                                     label="Nome (opcional)"
                                     value={form.name}
                                     onChange={(e) =>
-                                        setForm((p) => ({ ...p, name: e.target.value }))
+                                        setForm((p) => ({
+                                            ...p,
+                                            name: e.target.value,
+                                        }))
                                     }
                                 />
                                 <TextField
                                     label="Palavras/Frases (1 por linha)"
                                     value={form.phrases}
                                     onChange={(e) =>
-                                        setForm((p) => ({ ...p, phrases: e.target.value }))
+                                        setForm((p) => ({
+                                            ...p,
+                                            phrases: e.target.value,
+                                        }))
                                     }
                                     multiline
                                     minRows={3}
@@ -250,25 +271,43 @@ export default function TriggersPage() {
                                             label="Tipo de match"
                                             value={form.matchType}
                                             onChange={(e) =>
-                                                setForm((p) => ({ ...p, matchType: e.target.value }))
+                                                setForm((p) => ({
+                                                    ...p,
+                                                    matchType: e.target.value,
+                                                }))
                                             }
                                         >
-                                            <MenuItem value="exact">Igual</MenuItem>
-                                            <MenuItem value="contains">Contém</MenuItem>
-                                            <MenuItem value="regex">Regex</MenuItem>
+                                            <MenuItem value="exact">
+                                                Igual
+                                            </MenuItem>
+                                            <MenuItem value="contains">
+                                                Contém
+                                            </MenuItem>
+                                            <MenuItem value="regex">
+                                                Regex
+                                            </MenuItem>
                                         </Select>
                                     </FormControl>
                                     <FormControl fullWidth>
-                                        <InputLabel>Modo de resposta</InputLabel>
+                                        <InputLabel>
+                                            Modo de resposta
+                                        </InputLabel>
                                         <Select
                                             label="Modo de resposta"
                                             value={form.replyMode}
                                             onChange={(e) =>
-                                                setForm((p) => ({ ...p, replyMode: e.target.value }))
+                                                setForm((p) => ({
+                                                    ...p,
+                                                    replyMode: e.target.value,
+                                                }))
                                             }
                                         >
-                                            <MenuItem value="reply">Responder a mensagem</MenuItem>
-                                            <MenuItem value="new">Mensagem nova</MenuItem>
+                                            <MenuItem value="reply">
+                                                Responder a mensagem
+                                            </MenuItem>
+                                            <MenuItem value="new">
+                                                Mensagem nova
+                                            </MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Stack>
@@ -278,20 +317,29 @@ export default function TriggersPage() {
                                     spacing={2}
                                 >
                                     <FormControl fullWidth>
-                                        <InputLabel>Tipo de resposta</InputLabel>
+                                        <InputLabel>
+                                            Tipo de resposta
+                                        </InputLabel>
                                         <Select
                                             label="Tipo de resposta"
                                             value={form.responseType}
                                             onChange={(e) =>
                                                 setForm((p) => ({
                                                     ...p,
-                                                    responseType: e.target.value,
+                                                    responseType:
+                                                        e.target.value,
                                                 }))
                                             }
                                         >
-                                            <MenuItem value="text">Texto</MenuItem>
-                                            <MenuItem value="image">Imagem</MenuItem>
-                                            <MenuItem value="video">Vídeo</MenuItem>
+                                            <MenuItem value="text">
+                                                Texto
+                                            </MenuItem>
+                                            <MenuItem value="image">
+                                                Imagem
+                                            </MenuItem>
+                                            <MenuItem value="video">
+                                                Vídeo
+                                            </MenuItem>
                                         </Select>
                                     </FormControl>
                                     <TextField
@@ -315,7 +363,10 @@ export default function TriggersPage() {
                                         minRows={3}
                                         value={form.responseText}
                                         onChange={(e) =>
-                                            setForm((p) => ({ ...p, responseText: e.target.value }))
+                                            setForm((p) => ({
+                                                ...p,
+                                                responseText: e.target.value,
+                                            }))
                                         }
                                     />
                                 ) : (
@@ -326,7 +377,8 @@ export default function TriggersPage() {
                                             onChange={(e) =>
                                                 setForm((p) => ({
                                                     ...p,
-                                                    responseMediaUrl: e.target.value,
+                                                    responseMediaUrl:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
@@ -335,11 +387,17 @@ export default function TriggersPage() {
                                             component="label"
                                             disabled={uploading}
                                         >
-                                            {uploading ? "Enviando..." : "Enviar mídia e preencher URL"}
+                                            {uploading
+                                                ? "Enviando..."
+                                                : "Enviar mídia e preencher URL"}
                                             <input
                                                 type="file"
                                                 hidden
-                                                onChange={(e) => handleUpload(e.target.files?.[0])}
+                                                onChange={(e) =>
+                                                    handleUpload(
+                                                        e.target.files?.[0]
+                                                    )
+                                                }
                                             />
                                         </Button>
                                         <TextField
@@ -348,7 +406,8 @@ export default function TriggersPage() {
                                             onChange={(e) =>
                                                 setForm((p) => ({
                                                     ...p,
-                                                    responseText: e.target.value,
+                                                    responseText:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
@@ -377,7 +436,8 @@ export default function TriggersPage() {
                                         onChange={(e) =>
                                             setForm((p) => ({
                                                 ...p,
-                                                cooldownPerUserSeconds: e.target.value,
+                                                cooldownPerUserSeconds:
+                                                    e.target.value,
                                             }))
                                         }
                                     />
@@ -393,7 +453,10 @@ export default function TriggersPage() {
                                         InputLabelProps={{ shrink: true }}
                                         value={form.expiresAt}
                                         onChange={(e) =>
-                                            setForm((p) => ({ ...p, expiresAt: e.target.value }))
+                                            setForm((p) => ({
+                                                ...p,
+                                                expiresAt: e.target.value,
+                                            }))
                                         }
                                     />
                                     <TextField
@@ -401,7 +464,10 @@ export default function TriggersPage() {
                                         type="number"
                                         value={form.maxUses}
                                         onChange={(e) =>
-                                            setForm((p) => ({ ...p, maxUses: e.target.value }))
+                                            setForm((p) => ({
+                                                ...p,
+                                                maxUses: e.target.value,
+                                            }))
                                         }
                                     />
                                 </Stack>
@@ -418,7 +484,8 @@ export default function TriggersPage() {
                                                 onChange={(e) =>
                                                     setForm((p) => ({
                                                         ...p,
-                                                        caseSensitive: e.target.checked,
+                                                        caseSensitive:
+                                                            e.target.checked,
                                                     }))
                                                 }
                                             />
@@ -432,7 +499,8 @@ export default function TriggersPage() {
                                                 onChange={(e) =>
                                                     setForm((p) => ({
                                                         ...p,
-                                                        normalizeAccents: e.target.checked,
+                                                        normalizeAccents:
+                                                            e.target.checked,
                                                     }))
                                                 }
                                             />
@@ -446,7 +514,8 @@ export default function TriggersPage() {
                                                 onChange={(e) =>
                                                     setForm((p) => ({
                                                         ...p,
-                                                        wholeWord: e.target.checked,
+                                                        wholeWord:
+                                                            e.target.checked,
                                                     }))
                                                 }
                                             />
@@ -466,7 +535,8 @@ export default function TriggersPage() {
                                                 onChange={(e) =>
                                                     setForm((p) => ({
                                                         ...p,
-                                                        mentionSender: e.target.checked,
+                                                        mentionSender:
+                                                            e.target.checked,
                                                     }))
                                                 }
                                             />
@@ -480,7 +550,8 @@ export default function TriggersPage() {
                                                 onChange={(e) =>
                                                     setForm((p) => ({
                                                         ...p,
-                                                        active: e.target.checked,
+                                                        active: e.target
+                                                            .checked,
                                                     }))
                                                 }
                                             />
@@ -497,8 +568,10 @@ export default function TriggersPage() {
                                                 onChange={(e) =>
                                                     setForm((p) => ({
                                                         ...p,
-                                                        restrictByUsers: e.target.checked,
-                                                        allowedUsers: e.target.checked
+                                                        restrictByUsers:
+                                                            e.target.checked,
+                                                        allowedUsers: e.target
+                                                            .checked
                                                             ? p.allowedUsers
                                                             : [],
                                                     }))
@@ -510,18 +583,26 @@ export default function TriggersPage() {
                                     {form.restrictByUsers && (
                                         <Stack spacing={1}>
                                             {contextError && (
-                                                <Alert severity="warning">{contextError}</Alert>
+                                                <Alert severity="warning">
+                                                    {contextError}
+                                                </Alert>
                                             )}
                                             <Stack
                                                 direction="row"
                                                 spacing={1}
                                                 alignItems="center"
                                             >
-                                                <Typography variant="body2" color="text.secondary">
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
                                                     Quem pode disparar
                                                 </Typography>
                                                 {contextLoading && (
-                                                    <CircularProgress size={16} thickness={5} />
+                                                    <CircularProgress
+                                                        size={16}
+                                                        thickness={5}
+                                                    />
                                                 )}
                                                 {!contextLoading && (
                                                     <Button
@@ -529,23 +610,37 @@ export default function TriggersPage() {
                                                         variant="text"
                                                         onClick={async () => {
                                                             try {
-                                                                setContextLoading(true);
-                                                                await api.refreshGroupContext(groupId);
+                                                                setContextLoading(
+                                                                    true
+                                                                );
+                                                                await api.refreshGroupContext(
+                                                                    groupId
+                                                                );
                                                                 // tenta ler o contexto atual; pode ainda nÇõo ter sido processado
                                                                 try {
-                                                                    const ctx = await api.getGroupContext(groupId);
-                                                                    setContextMembers(ctx?.members || []);
+                                                                    const ctx =
+                                                                        await api.getGroupContext(
+                                                                            groupId
+                                                                        );
+                                                                    setContextMembers(
+                                                                        ctx?.members ||
+                                                                            []
+                                                                    );
                                                                 } catch (_) {
                                                                     // se o worker ainda nÇõo salvou, mantemos a lista atual
                                                                 }
-                                                                setContextError("");
+                                                                setContextError(
+                                                                    ""
+                                                                );
                                                             } catch (err) {
                                                                 setContextError(
                                                                     err?.message ||
                                                                         "Erro ao atualizar contexto"
                                                                 );
                                                             } finally {
-                                                                setContextLoading(false);
+                                                                setContextLoading(
+                                                                    false
+                                                                );
                                                             }
                                                         }}
                                                         disabled={!groupId}
@@ -559,40 +654,69 @@ export default function TriggersPage() {
                                                 disableCloseOnSelect
                                                 options={contextMembers}
                                                 getOptionLabel={(option) =>
+                                                    option.pushname ||
                                                     option.displayName ||
                                                     option.name ||
-                                                    option.pushname ||
                                                     option.number ||
                                                     option.id ||
                                                     "Sem nome"
                                                 }
-                                                renderOption={(props, option) => {
+                                                renderOption={(
+                                                    props,
+                                                    option
+                                                ) => {
                                                     const label =
+                                                        option.pushname ||
                                                         option.displayName ||
                                                         option.name ||
-                                                        option.pushname ||
                                                         option.number ||
                                                         option.id;
                                                     return (
-                                                        <li {...props} key={option.id || label}>
-                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                        <li
+                                                            {...props}
+                                                            key={
+                                                                option.id ||
+                                                                label
+                                                            }
+                                                        >
+                                                            <Stack
+                                                                direction="row"
+                                                                spacing={1}
+                                                                alignItems="center"
+                                                            >
                                                                 <Avatar
-                                                                    src={option.profilePicUrl || ""}
+                                                                    src={
+                                                                        option.profilePicUrl ||
+                                                                        ""
+                                                                    }
                                                                     alt={label}
-                                                                    sx={{ width: 28, height: 28 }}
+                                                                    sx={{
+                                                                        width: 28,
+                                                                        height: 28,
+                                                                    }}
                                                                 >
-                                                                    {(label || "?").charAt(0)}
+                                                                    {(
+                                                                        label ||
+                                                                        "?"
+                                                                    ).charAt(0)}
                                                                 </Avatar>
-                                                                <Typography variant="body2">{label}</Typography>
+                                                                <Typography variant="body2">
+                                                                    {label}
+                                                                </Typography>
                                                             </Stack>
                                                         </li>
                                                     );
                                                 }}
-                                                value={(form.allowedUsers || []).map((id) =>
-                                                    contextMembers.find((m) => m.id === id) || {
-                                                        id,
-                                                        name: id,
-                                                    }
+                                                value={(
+                                                    form.allowedUsers || []
+                                                ).map(
+                                                    (id) =>
+                                                        contextMembers.find(
+                                                            (m) => m.id === id
+                                                        ) || {
+                                                            id,
+                                                            name: id,
+                                                        }
                                                 )}
                                                 onChange={(_, newVal) =>
                                                     setForm((p) => ({
@@ -602,32 +726,51 @@ export default function TriggersPage() {
                                                             .filter(Boolean),
                                                     }))
                                                 }
-                                                renderTags={(value, getTagProps) =>
-                                                    value.map((option, index) => (
-                                                        <Chip
-                                                            {...getTagProps({ index })}
-                                                            key={option.id || option.name}
-                                                            avatar={
-                                                                <Avatar
-                                                                    src={option.profilePicUrl || ""}
-                                                                    alt={option.name || option.id}
-                                                                >
-                                                                    {(option.name ||
-                                                                        option.pushname ||
-                                                                        option.id ||
-                                                                        "?"
-                                                                    ).charAt(0)}
-                                                                </Avatar>
-                                                            }
-                                                            label={
-                                                                option.displayName ||
-                                                                option.name ||
-                                                                option.pushname ||
-                                                                option.number ||
-                                                                option.id
-                                                            }
-                                                        />
-                                                    ))
+                                                renderTags={(
+                                                    value,
+                                                    getTagProps
+                                                ) =>
+                                                    value.map(
+                                                        (option, index) => (
+                                                            <Chip
+                                                                {...getTagProps(
+                                                                    { index }
+                                                                )}
+                                                                key={
+                                                                    option.id ||
+                                                                    option.name
+                                                                }
+                                                                avatar={
+                                                                    <Avatar
+                                                                        src={
+                                                                            option.profilePicUrl ||
+                                                                            ""
+                                                                        }
+                                                                        alt={
+                                                                            option.name ||
+                                                                            option.id
+                                                                        }
+                                                                    >
+                                                                        {(
+                                                                            option.pushname ||
+                                                                            option.name ||
+                                                                            option.id ||
+                                                                            "?"
+                                                                        ).charAt(
+                                                                            0
+                                                                        )}
+                                                                    </Avatar>
+                                                                }
+                                                                label={
+                                                                    option.pushname ||
+                                                                    option.displayName ||
+                                                                    option.name ||
+                                                                    option.number ||
+                                                                    option.id
+                                                                }
+                                                            />
+                                                        )
+                                                    )
                                                 }
                                                 renderInput={(params) => (
                                                     <TextField
@@ -647,10 +790,21 @@ export default function TriggersPage() {
                                 <Stack
                                     direction={{ xs: "column", sm: "row" }}
                                     spacing={2}
-                                    sx={{ alignItems: { xs: "stretch", sm: "center" } }}
+                                    sx={{
+                                        alignItems: {
+                                            xs: "stretch",
+                                            sm: "center",
+                                        },
+                                    }}
                                 >
-                                    <Button variant="contained" onClick={handleSave} fullWidth>
-                                        {editingId ? "Salvar alterações" : "Criar trigger"}
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleSave}
+                                        fullWidth
+                                    >
+                                        {editingId
+                                            ? "Salvar alterações"
+                                            : "Criar trigger"}
                                     </Button>
                                     {editingId && (
                                         <Button
@@ -666,7 +820,11 @@ export default function TriggersPage() {
                                 </Stack>
                                 {status.type !== "idle" && status.message && (
                                     <Alert
-                                        severity={status.type === "error" ? "error" : "success"}
+                                        severity={
+                                            status.type === "error"
+                                                ? "error"
+                                                : "success"
+                                        }
                                     >
                                         {status.message}
                                     </Alert>
@@ -702,46 +860,91 @@ export default function TriggersPage() {
                                     <Card key={t._id} variant="outlined">
                                         <CardContent>
                                             <Stack
-                                                direction={{ xs: "column", sm: "row" }}
+                                                direction={{
+                                                    xs: "column",
+                                                    sm: "row",
+                                                }}
                                                 justifyContent="space-between"
-                                                alignItems={{ xs: "flex-start", sm: "center" }}
+                                                alignItems={{
+                                                    xs: "flex-start",
+                                                    sm: "center",
+                                                }}
                                                 sx={{ gap: 1 }}
                                             >
-                                                <Typography variant="subtitle1" fontWeight={700}>
+                                                <Typography
+                                                    variant="subtitle1"
+                                                    fontWeight={700}
+                                                >
                                                     {t.name || "(sem nome)"}
                                                 </Typography>
                                                 <Chip
-                                                    label={t.active ? "Ativo" : "Inativo"}
-                                                    color={t.active ? "success" : "default"}
+                                                    label={
+                                                        t.active
+                                                            ? "Ativo"
+                                                            : "Inativo"
+                                                    }
+                                                    color={
+                                                        t.active
+                                                            ? "success"
+                                                            : "default"
+                                                    }
                                                     size="small"
                                                 />
                                             </Stack>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Frases: {(t.phrases || []).join(", ")}
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                Frases:{" "}
+                                                {(t.phrases || []).join(", ")}
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Match: {t.matchType} | Resposta: {t.responseType}
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                Match: {t.matchType} | Resposta:{" "}
+                                                {t.responseType}
                                             </Typography>
                                             {t.responseMediaUrl && (
-                                                <Typography variant="body2" color="text.secondary">
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
                                                     Mídia: {t.responseMediaUrl}
                                                 </Typography>
                                             )}
                                             {t.expiresAt && (
-                                                <Typography variant="body2" color="text.secondary">
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
                                                     Expira em:{" "}
-                                                    {new Date(t.expiresAt).toLocaleString()}
+                                                    {new Date(
+                                                        t.expiresAt
+                                                    ).toLocaleString()}
                                                 </Typography>
                                             )}
-                                            {(t.maxUses || t.triggeredCount) && (
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Disparos: {t.triggeredCount || 0}
-                                                    {t.maxUses ? ` / ${t.maxUses}` : ""}
+                                            {(t.maxUses ||
+                                                t.triggeredCount) && (
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
+                                                    Disparos:{" "}
+                                                    {t.triggeredCount || 0}
+                                                    {t.maxUses
+                                                        ? ` / ${t.maxUses}`
+                                                        : ""}
                                                 </Typography>
                                             )}
                                             {t.allowedUsers?.length > 0 && (
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Restrito para: {t.allowedUsers.length} pessoas
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
+                                                    Restrito para:{" "}
+                                                    {t.allowedUsers.length}{" "}
+                                                    pessoas
                                                 </Typography>
                                             )}
                                         </CardContent>
@@ -755,13 +958,18 @@ export default function TriggersPage() {
                                                 gap: 1,
                                             }}
                                         >
-                                            <Button size="small" onClick={() => handleEdit(t)}>
+                                            <Button
+                                                size="small"
+                                                onClick={() => handleEdit(t)}
+                                            >
                                                 Editar
                                             </Button>
                                             <Button
                                                 size="small"
                                                 color="error"
-                                                onClick={() => handleDelete(t._id)}
+                                                onClick={() =>
+                                                    handleDelete(t._id)
+                                                }
                                             >
                                                 Remover
                                             </Button>
