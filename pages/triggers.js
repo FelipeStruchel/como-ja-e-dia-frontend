@@ -566,6 +566,28 @@ export default function TriggersPage() {
                                                     option.id ||
                                                     "Sem nome"
                                                 }
+                                                renderOption={(props, option) => {
+                                                    const label =
+                                                        option.displayName ||
+                                                        option.name ||
+                                                        option.pushname ||
+                                                        option.number ||
+                                                        option.id;
+                                                    return (
+                                                        <li {...props} key={option.id || label}>
+                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                                <Avatar
+                                                                    src={option.profilePicUrl || ""}
+                                                                    alt={label}
+                                                                    sx={{ width: 28, height: 28 }}
+                                                                >
+                                                                    {(label || "?").charAt(0)}
+                                                                </Avatar>
+                                                                <Typography variant="body2">{label}</Typography>
+                                                            </Stack>
+                                                        </li>
+                                                    );
+                                                }}
                                                 value={(form.allowedUsers || []).map((id) =>
                                                     contextMembers.find((m) => m.id === id) || {
                                                         id,
