@@ -26,6 +26,16 @@ const sections = [
         description: "Consulte os logs do backend e do worker, com filtro e auto-refresh.",
         href: "/logs",
     },
+    {
+        title: "Persona",
+        description: "Edite o tom da IA (persona) usado nas mensagens automáticas.",
+        href: "/persona",
+    },
+    {
+        title: "Agendamentos",
+        description: "Configure horários, mídia e random do dia para envios automáticos.",
+        href: "/schedules",
+    },
 ];
 
 export default function AdminPage() {
