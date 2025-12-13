@@ -559,8 +559,10 @@ export default function TriggersPage() {
                                                 disableCloseOnSelect
                                                 options={contextMembers}
                                                 getOptionLabel={(option) =>
+                                                    option.displayName ||
                                                     option.name ||
                                                     option.pushname ||
+                                                    option.number ||
                                                     option.id ||
                                                     "Sem nome"
                                                 }
@@ -595,7 +597,13 @@ export default function TriggersPage() {
                                                                     ).charAt(0)}
                                                                 </Avatar>
                                                             }
-                                                            label={option.name || option.id}
+                                                            label={
+                                                                option.displayName ||
+                                                                option.name ||
+                                                                option.pushname ||
+                                                                option.number ||
+                                                                option.id
+                                                            }
                                                         />
                                                     ))
                                                 }
