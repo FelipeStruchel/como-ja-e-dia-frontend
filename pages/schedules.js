@@ -37,8 +37,9 @@ const emptyForm = {
     includeRandomPool: true,
     cleanupAfterSend: false,
     personaPrompt: "",
-    cron: "0 6 * * *",
-    timezone: "America/Sao_Paulo",
+    time: "06:00",
+    useCronOverride: false,
+    cron: "",
     startDate: "",
     endDate: "",
     daysOfWeek: [],
@@ -116,8 +117,9 @@ export default function SchedulesPage() {
             includeRandomPool: s.includeRandomPool ?? true,
             cleanupAfterSend: s.cleanupAfterSend ?? false,
             personaPrompt: s.personaPrompt || "",
-            cron: s.cron || "0 6 * * *",
-            timezone: s.timezone || "America/Sao_Paulo",
+            time: s.time || "06:00",
+            useCronOverride: s.useCronOverride || false,
+            cron: s.cron || "",
             startDate: s.startDate ? new Date(s.startDate).toISOString().slice(0, 16) : "",
             endDate: s.endDate ? new Date(s.endDate).toISOString().slice(0, 16) : "",
             daysOfWeek: s.daysOfWeek || [],
@@ -310,19 +312,57 @@ export default function SchedulesPage() {
                                     }
                                     helperText="Guardrails fixos permanecem. Se vazio, usa persona global."
                                 />
-                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={form.useCronOverride}
+                                            onChange={(e) =>
+                                                setForm((p) => ({
+                                                    ...p,
+                                                    useCronOverride: e.target.checked,
+                                                }))
+                                            }
+                                        />
+                                    }
+                                    label="Modo avançado (cron manual)"
+                                />
+                                {!form.useCronOverride ? (
+                                    <>
+                                        <TextField
+                                            label="Horário (HH:mm)"
+                                            type="time"
+                                            InputLabelProps={{ shrink: true }}
+                                            value={form.time}
+                                            onChange={(e) => setForm((p) => ({ ...p, time: e.target.value }))}
+                                        />
+                                        <Autocomplete
+                                            multiple
+                                            options={dowOptions}
+                                            getOptionLabel={(o) => o.label}
+                                            value={dowOptions.filter((o) => form.daysOfWeek.includes(o.value))}
+                                            onChange={(_, newVal) =>
+                                                setForm((p) => ({
+                                                    ...p,
+                                                    daysOfWeek: newVal.map((v) => v.value),
+                                                }))
+                                            }
+                                            renderInput={(params) => (
+                                                <TextField
+                                                    {...params}
+                                                    label="Dias da semana (vazio = todos)"
+                                                    placeholder="Selecione dias"
+                                                />
+                                            )}
+                                        />
+                                    </>
+                                ) : (
                                     <TextField
                                         label="Cron"
                                         value={form.cron}
                                         onChange={(e) => setForm((p) => ({ ...p, cron: e.target.value }))}
                                         helperText='Ex: "0 6 * * *"'
                                     />
-                                    <TextField
-                                        label="Timezone"
-                                        value={form.timezone}
-                                        onChange={(e) => setForm((p) => ({ ...p, timezone: e.target.value }))}
-                                    />
-                                </Stack>
+                                )}
                                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                                     <TextField
                                         label="Início (opcional)"
@@ -343,25 +383,6 @@ export default function SchedulesPage() {
                                         }
                                     />
                                 </Stack>
-                                <Autocomplete
-                                    multiple
-                                    options={dowOptions}
-                                    getOptionLabel={(o) => o.label}
-                                    value={dowOptions.filter((o) => form.daysOfWeek.includes(o.value))}
-                                    onChange={(_, newVal) =>
-                                        setForm((p) => ({
-                                            ...p,
-                                            daysOfWeek: newVal.map((v) => v.value),
-                                        }))
-                                    }
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            label="Dias da semana (vazio = todos)"
-                                            placeholder="Selecione dias"
-                                        />
-                                    )}
-                                />
                                 <FormControlLabel
                                     control={
                                         <Switch
