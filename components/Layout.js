@@ -30,6 +30,8 @@ const protectedLinks = [
     { href: "/triggers", label: "Triggers" },
     { href: "/logs", label: "Logs" },
     { href: "/admin", label: "Admin" },
+    { href: "/persona", label: "Persona" },
+    { href: "/schedules", label: "Agendamentos" },
 ];
 
 export default function Layout({ children, title }) {
