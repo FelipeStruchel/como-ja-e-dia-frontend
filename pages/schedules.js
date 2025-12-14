@@ -8,6 +8,7 @@ import {
     CardActions,
     CardContent,
     Chip,
+    Grid,
     FormControl,
     FormControlLabel,
     InputLabel,
@@ -61,6 +62,23 @@ const inferMediaTypeFromUrl = (url = "") => {
     const imageExt = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
     if (imageExt.some((ext) => lower.endsWith(ext))) return "image";
     return "image";
+};
+
+const buildPublicUrl = (url = "") => {
+    if (!url) return "";
+    if (typeof window === "undefined") return url;
+    // Se veio interno (ex: http://backend:3000 ou /media/...), troca host pelo atual.
+    try {
+        if (url.startsWith("http://backend") || url.startsWith("https://backend")) {
+            const u = new URL(url);
+            return `${window.location.origin}${u.pathname}`;
+        }
+        if (url.startsWith("http")) return url;
+        if (url.startsWith("/")) return `${window.location.origin}${url}`;
+        return `${window.location.origin}/${url}`;
+    } catch (_) {
+        return url;
+    }
 };
 
 export default function SchedulesPage() {
@@ -122,7 +140,7 @@ export default function SchedulesPage() {
             name: s.name || "",
             type: s.type || "image",
             mediaUrl: s.mediaUrl || "",
-            displayUrl: s.displayUrl || s.mediaUrl || "",
+            displayUrl: buildPublicUrl(s.displayUrl || s.mediaUrl || ""),
             textContent: s.textContent || "",
             captionMode: s.captionMode || "auto",
             customCaption: s.customCaption || "",
@@ -160,7 +178,7 @@ export default function SchedulesPage() {
                     ...prev,
                     type: media.type || inferMediaTypeFromUrl(media.url),
                     mediaUrl: media.url,
-                    displayUrl: media.urlPublic || media.url,
+                    displayUrl: media.urlPublic || buildPublicUrl(media.url),
                 }));
                 setStatus({ type: "success", message: "Midia enviada, URL aplicada" });
             }
@@ -254,7 +272,7 @@ export default function SchedulesPage() {
                                                 setForm((p) => ({
                                                     ...p,
                                                     mediaUrl: url,
-                                                    displayUrl: url,
+                                                    displayUrl: buildPublicUrl(url),
                                                     type: inferMediaTypeFromUrl(url),
                                                 }));
                                             }}
@@ -265,7 +283,7 @@ export default function SchedulesPage() {
                                             </Typography>
                                         )}
                                         <Button variant="outlined" component="label" disabled={uploading}>
-                                            {uploading ? "Enviando..." : "Enviar midia (scope daily)"}
+                                            {uploading ? "Enviando..." : "Enviar midia"}
                                             <input
                                                 type="file"
                                                 hidden
