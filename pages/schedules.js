@@ -34,7 +34,6 @@ const emptyForm = {
     customCaption: "",
     includeIntro: true,
     includeRandomPool: true,
-    cleanupAfterSend: false,
     announceEvents: false,
     personaPrompt: "",
     time: "06:00",
@@ -147,7 +146,6 @@ export default function SchedulesPage() {
             customCaption: s.customCaption || "",
             includeIntro: s.includeIntro ?? true,
             includeRandomPool: s.includeRandomPool ?? true,
-            cleanupAfterSend: s.cleanupAfterSend ?? false,
             announceEvents: s.announceEvents ?? false,
             personaPrompt: s.personaPrompt || "",
             time: s.time || "06:00",
@@ -357,20 +355,6 @@ export default function SchedulesPage() {
                                         />
                                     }
                                     label="Anunciar eventos do dia"
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={form.cleanupAfterSend}
-                                            onChange={(e) =>
-                                                setForm((p) => ({
-                                                    ...p,
-                                                    cleanupAfterSend: e.target.checked,
-                                                }))
-                                            }
-                                        />
-                                    }
-                                    label="Limpar midia principal ao finalizar (apenas se ultima data)"
                                 />
                                 <TextField
                                     label="Persona (opcional, substitui a global)"
