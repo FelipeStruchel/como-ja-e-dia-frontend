@@ -35,6 +35,7 @@ const emptyForm = {
     includeIntro: true,
     includeRandomPool: true,
     cleanupAfterSend: false,
+    announceEvents: false,
     personaPrompt: "",
     time: "06:00",
     useCronOverride: false,
@@ -147,6 +148,7 @@ export default function SchedulesPage() {
             includeIntro: s.includeIntro ?? true,
             includeRandomPool: s.includeRandomPool ?? true,
             cleanupAfterSend: s.cleanupAfterSend ?? false,
+            announceEvents: s.announceEvents ?? false,
             personaPrompt: s.personaPrompt || "",
             time: s.time || "06:00",
             useCronOverride: s.useCronOverride || false,
@@ -345,6 +347,20 @@ export default function SchedulesPage() {
                                 <FormControlLabel
                                     control={
                                         <Switch
+                                            checked={form.announceEvents}
+                                            onChange={(e) =>
+                                                setForm((p) => ({
+                                                    ...p,
+                                                    announceEvents: e.target.checked,
+                                                }))
+                                            }
+                                        />
+                                    }
+                                    label="Anunciar eventos do dia"
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Switch
                                             checked={form.cleanupAfterSend}
                                             onChange={(e) =>
                                                 setForm((p) => ({
@@ -522,6 +538,9 @@ export default function SchedulesPage() {
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
                                                 Random do dia: {s.includeRandomPool !== false ? "Sim" : "Nao"}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Anunciar eventos: {s.announceEvents ? "Sim" : "Nao"}
                                             </Typography>
                                             {s.captionMode !== "none" && (
                                                 <Typography variant="body2" color="text.secondary">
