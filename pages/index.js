@@ -16,6 +16,7 @@ import {
     Grid,
 } from "@mui/material";
 import Layout from "../components/Layout";
+import WhatsAppStatus from "../components/WhatsAppStatus";
 import { api } from "../lib/apiClient";
 
 const MAX_TEXT_LENGTH = 4000;
@@ -133,6 +134,7 @@ export default function DailyPage() {
 
     return (
         <Layout title="Mensagem do Dia">
+            <WhatsAppStatus />
             <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                     <Card>
