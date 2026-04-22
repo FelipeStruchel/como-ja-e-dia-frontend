@@ -137,7 +137,7 @@ export default function TriggersPage() {
     }
 
     function handleEdit(trigger) {
-        setEditingId(trigger._id);
+        setEditingId(trigger.id);
         setForm({
             name: trigger.name || "",
             phrases: (trigger.phrases || []).join("\n"),
@@ -857,7 +857,7 @@ export default function TriggersPage() {
                             )}
                             <Stack spacing={2}>
                                 {(triggers || []).map((t) => (
-                                    <Card key={t._id} variant="outlined">
+                                    <Card key={t.id} variant="outlined">
                                         <CardContent>
                                             <Stack
                                                 direction={{
@@ -968,7 +968,7 @@ export default function TriggersPage() {
                                                 size="small"
                                                 color="error"
                                                 onClick={() =>
-                                                    handleDelete(t._id)
+                                                    handleDelete(t.id)
                                                 }
                                             >
                                                 Remover

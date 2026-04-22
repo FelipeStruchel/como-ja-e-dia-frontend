@@ -120,7 +120,7 @@ export default function LogsPage() {
                     <Stack spacing={1.5}>
                         {(data || []).map((logItem) => (
                             <Box
-                                key={logItem._id || `${logItem.createdAt}-${logItem.message}`}
+                                key={logItem.id || `${logItem.createdAt}-${logItem.message}`}
                                 sx={{
                                     p: 1.5,
                                     borderRadius: 1,

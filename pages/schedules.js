@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import {
     Alert,
@@ -135,7 +135,7 @@ export default function SchedulesPage() {
     }
 
     function handleEdit(s) {
-        setEditingId(s._id);
+        setEditingId(s.id);
         setForm({
             name: s.name || "",
             type: s.type || "image",
@@ -500,7 +500,7 @@ export default function SchedulesPage() {
                             {error && <Alert severity="error">Erro ao carregar schedules: {error.message}</Alert>}
                             <Stack spacing={2}>
                                 {(schedules || []).map((s) => (
-                                    <Card key={s._id} variant="outlined">
+                                    <Card key={s.id} variant="outlined">
                                         <CardContent>
                                             <Stack
                                                 direction={{ xs: "column", sm: "row" }}
@@ -545,7 +545,7 @@ export default function SchedulesPage() {
                                             <Button size="small" onClick={() => handleEdit(s)}>
                                                 Editar
                                             </Button>
-                                            <Button size="small" color="error" onClick={() => handleDelete(s._id)}>
+                                            <Button size="small" color="error" onClick={() => handleDelete(s.id)}>
                                                 Remover
                                             </Button>
                                         </CardActions>

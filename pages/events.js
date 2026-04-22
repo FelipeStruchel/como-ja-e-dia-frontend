@@ -127,7 +127,7 @@ export default function EventsPage() {
                             {isValidating && <LinearProgress sx={{ mb: 2 }} />}
                             <Stack spacing={2}>
                                 {(events || []).map((ev) => (
-                                    <Card key={ev._id} variant="outlined">
+                                    <Card key={ev.id} variant="outlined">
                                         <CardContent>
                                             <Typography variant="subtitle1" fontWeight={700}>
                                                 {ev.name}
@@ -149,7 +149,7 @@ export default function EventsPage() {
                                             <Button
                                                 color="error"
                                                 size="small"
-                                                onClick={() => handleDelete(ev._id)}
+                                                onClick={() => handleDelete(ev.id)}
                                             >
                                                 Remover
                                             </Button>
