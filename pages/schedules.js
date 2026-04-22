@@ -67,17 +67,21 @@ const inferMediaTypeFromUrl = (url = "") => {
 const buildPublicUrl = (url = "") => {
     if (!url) return "";
     if (typeof window === "undefined") return url;
+    
+    // Tratamento para garantir que a URL seja válida, principalmente com espaços
+    const safeUrl = url.replace(/ /g, "%20");
+    
     // Se veio interno (ex: http://backend:3000 ou /media/...), troca host pelo atual.
     try {
-        if (url.startsWith("http://backend") || url.startsWith("https://backend")) {
-            const u = new URL(url);
-            return `${window.location.origin}${u.pathname}`;
+        if (safeUrl.startsWith("http://backend") || safeUrl.startsWith("https://backend")) {
+            const u = new URL(safeUrl);
+            return `${window.location.origin}${u.pathname}${u.search}`;
         }
-        if (url.startsWith("http")) return url;
-        if (url.startsWith("/")) return `${window.location.origin}${url}`;
-        return `${window.location.origin}/${url}`;
+        if (safeUrl.startsWith("http")) return safeUrl;
+        if (safeUrl.startsWith("/")) return `${window.location.origin}${safeUrl}`;
+        return `${window.location.origin}/${safeUrl}`;
     } catch (_) {
-        return url;
+        return safeUrl;
     }
 };
 
