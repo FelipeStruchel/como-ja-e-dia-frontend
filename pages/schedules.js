@@ -69,7 +69,7 @@ const buildPublicUrl = (url = "") => {
     if (typeof window === "undefined") return url;
     
     // Tratamento para garantir que a URL seja válida, principalmente com espaços
-    const safeUrl = url.replace(/ /g, "%20");
+    const safeUrl = url.replace(" ", "_");
     
     // Se veio interno (ex: http://backend:3000 ou /media/...), troca host pelo atual.
     try {
