@@ -27,20 +27,22 @@ const publicLinks = [
 ];
 
 const protectedLinks = [
-    { href: "/triggers", label: "Triggers" },
-    { href: "/logs", label: "Logs" },
-    { href: "/admin", label: "Admin" },
-    { href: "/persona", label: "Persona" },
-    { href: "/schedules", label: "Agendamentos" },
+    { href: "/triggers", label: "Triggers", role: "bom_dia_admin" },
+    { href: "/logs", label: "Logs", role: "super_admin" },
+    { href: "/admin", label: "Admin", role: "super_admin" },
+    { href: "/persona", label: "Persona", role: "bom_dia_admin" },
+    { href: "/schedules", label: "Agendamentos", role: "bom_dia_admin" },
 ];
 
 export default function Layout({ children, title }) {
-    const { user, loading, logout } = useAuth();
+    const { user, loading, logout, hasRole } = useAuth();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [drawerOpen, setDrawerOpen] = useState(false);
 
-    const navLinks = user ? [...publicLinks, ...protectedLinks] : publicLinks;
+    const navLinks = user
+        ? [...publicLinks, ...protectedLinks.filter((link) => hasRole(link.role))]
+        : publicLinks;
 
     function toggleDrawer(open) {
         setDrawerOpen(open);
