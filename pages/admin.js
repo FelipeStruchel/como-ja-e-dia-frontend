@@ -1,195 +1,162 @@
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/router";
 import {
     Card,
-    CardActionArea,
     CardContent,
     Grid,
     Typography,
     Alert,
     Stack,
-    Button,
-    Chip,
+    Switch,
+    FormControlLabel,
+    Checkbox,
+    FormGroup,
     LinearProgress,
+    Chip,
 } from "@mui/material";
 import Layout from "../components/Layout";
+import { useAuth } from "../lib/auth";
 import { api } from "../lib/apiClient";
 
-const sections = [
-    {
-        title: "Triggers",
-        description: "Gerencie palavras-chave, respostas e regras de disparo.",
-        href: "/triggers",
-    },
-    {
-        title: "Logs",
-        description: "Consulte os logs do backend e do worker, com filtro e auto-refresh.",
-        href: "/logs",
-    },
-    {
-        title: "Persona",
-        description: "Edite o tom da IA (persona) usado nas mensagens automáticas.",
-        href: "/persona",
-    },
-    {
-        title: "Agendamentos",
-        description: "Configure horários, mídia e random do dia para envios automáticos.",
-        href: "/schedules",
-    },
-];
-
 export default function AdminPage() {
-    const [sessionOk, setSessionOk] = useState(true);
-    const [checked, setChecked] = useState(false);
+    const { user, loading, hasRole } = useAuth();
+    const router = useRouter();
     const [users, setUsers] = useState([]);
+    const [availableRoles, setAvailableRoles] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [userError, setUserError] = useState("");
 
     useEffect(() => {
-        api.me()
-            .then(() => setSessionOk(true))
-            .catch(() => setSessionOk(false))
-            .finally(() => setChecked(true));
-    }, []);
+        if (!loading && user && !hasRole("super_admin")) {
+            router.replace("/403");
+        }
+        if (!loading && !user) {
+            router.replace("/login");
+        }
+    }, [loading, user, hasRole, router]);
 
     useEffect(() => {
-        if (!sessionOk) return;
+        if (!user || !hasRole("super_admin")) return;
         setLoadingUsers(true);
-        api.listUsers()
-            .then((data) => {
-                setUsers(data || []);
+        Promise.all([api.listUsers(), api.listRoles()])
+            .then(([usersData, rolesData]) => {
+                setUsers(usersData || []);
+                setAvailableRoles(rolesData || []);
                 setUserError("");
             })
-            .catch((err) => setUserError(err?.message || "Erro ao carregar usuários"))
+            .catch((err) => setUserError(err?.message || "Erro ao carregar dados"))
             .finally(() => setLoadingUsers(false));
-    }, [sessionOk]);
+    }, [user]);
 
-    async function handleApprove(id) {
-        await api.approveUser(id);
-        setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: "approved" } : u)));
+    async function handleActiveToggle(id, currentActive) {
+        const newActive = !currentActive;
+        await api.setUserActive(id, newActive);
+        setUsers((prev) =>
+            prev.map((u) => (u.id === id ? { ...u, active: newActive } : u))
+        );
     }
-    async function handleBlock(id) {
-        await api.blockUser(id);
-        setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: "blocked" } : u)));
+
+    async function handleRoleToggle(userId, slug, currentlyHas) {
+        if (currentlyHas) {
+            await api.removeRole(userId, slug);
+            setUsers((prev) =>
+                prev.map((u) =>
+                    u.id === userId
+                        ? { ...u, roles: u.roles.filter((r) => r !== slug) }
+                        : u
+                )
+            );
+        } else {
+            await api.assignRole(userId, slug);
+            setUsers((prev) =>
+                prev.map((u) =>
+                    u.id === userId ? { ...u, roles: [...u.roles, slug] } : u
+                )
+            );
+        }
     }
+
+    if (loading || !user) return null;
 
     return (
-        <Layout title="Admin">
-            {!sessionOk && checked && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                    É preciso estar logado. Vá para /login e faça o login.
-                </Alert>
-            )}
-            <Typography variant="body1" sx={{ mb: 3 }}>
-                Acesso centralizado às áreas administrativas do bot.
-            </Typography>
+        <Layout title="Gerenciar Usuários">
             <Grid container spacing={3}>
-                {sections.map((sec) => (
-                    <Grid item xs={12} md={6} key={sec.href}>
-                        <Card>
-                            <CardActionArea component={Link} href={sec.href}>
+                <Grid item xs={12}>
+                    {loadingUsers && <LinearProgress sx={{ mb: 2 }} />}
+                    {userError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {userError}
+                        </Alert>
+                    )}
+                    <Stack spacing={2}>
+                        {users.map((u) => (
+                            <Card key={u.id} variant="outlined">
                                 <CardContent>
-                                    <Stack spacing={1}>
-                                        <Typography variant="h6">{sec.title}</Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {sec.description}
-                                        </Typography>
+                                    <Stack
+                                        direction={{ xs: "column", sm: "row" }}
+                                        spacing={2}
+                                        alignItems={{ sm: "flex-start" }}
+                                        justifyContent="space-between"
+                                    >
+                                        <Stack spacing={0.5}>
+                                            <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                                                {u.email}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {u.name || "Sem nome"}
+                                            </Typography>
+                                            <Chip
+                                                label={u.active ? "ativo" : "inativo"}
+                                                color={u.active ? "success" : "default"}
+                                                variant="outlined"
+                                                size="small"
+                                                sx={{ width: "fit-content" }}
+                                            />
+                                        </Stack>
+                                        <Stack spacing={1}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Switch
+                                                        checked={u.active}
+                                                        onChange={() => handleActiveToggle(u.id, u.active)}
+                                                        size="small"
+                                                    />
+                                                }
+                                                label="Conta ativa"
+                                            />
+                                            <FormGroup>
+                                                {availableRoles.map((role) => (
+                                                    <FormControlLabel
+                                                        key={role.slug}
+                                                        control={
+                                                            <Checkbox
+                                                                checked={u.roles.includes(role.slug)}
+                                                                onChange={() =>
+                                                                    handleRoleToggle(
+                                                                        u.id,
+                                                                        role.slug,
+                                                                        u.roles.includes(role.slug)
+                                                                    )
+                                                                }
+                                                                size="small"
+                                                            />
+                                                        }
+                                                        label={role.name}
+                                                    />
+                                                ))}
+                                            </FormGroup>
+                                        </Stack>
                                     </Stack>
                                 </CardContent>
-                            </CardActionArea>
-                        </Card>
-                    </Grid>
-                ))}
-
-                {sessionOk && (
-                    <Grid item xs={12}>
-                        <Card>
-                            <CardContent>
-                                <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    justifyContent="space-between"
-                                    sx={{ mb: 2 }}
-                                >
-                                    <Typography variant="h6">Usuários</Typography>
-                                    <Chip
-                                        label={`${users.length} usuários`}
-                                        color="primary"
-                                        variant="outlined"
-                                        sx={{ fontWeight: 700, borderWidth: 2 }}
-                                    />
-                                </Stack>
-                                {loadingUsers && <LinearProgress sx={{ mb: 2 }} />}
-                                {userError && (
-                                    <Alert severity="error" sx={{ mb: 2 }}>
-                                        {userError}
-                                    </Alert>
-                                )}
-                                <Stack spacing={1.5}>
-                                    {users.map((u) => (
-                                        <Card key={u.id} variant="outlined">
-                                            <CardContent>
-                                                <Stack
-                                                    direction={{ xs: "column", sm: "row" }}
-                                                    spacing={1}
-                                                    alignItems={{ sm: "center" }}
-                                                    justifyContent="space-between"
-                                                >
-                                                    <Stack spacing={0.5}>
-                                                        <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                                                            {u.email}
-                                                        </Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {u.name || "Sem nome"}
-                                                        </Typography>
-                                                    </Stack>
-                                                    <Stack direction="row" spacing={1} alignItems="center">
-                                                        <Chip
-                                                            label={u.status}
-                                                            color={
-                                                                u.status === "approved"
-                                                                    ? "success"
-                                                                    : u.status === "blocked"
-                                                                    ? "error"
-                                                                    : "warning"
-                                                            }
-                                                            variant="outlined"
-                                                            sx={{ textTransform: "capitalize" }}
-                                                        />
-                                                        {u.status !== "approved" && (
-                                                            <Button
-                                                                size="small"
-                                                                variant="contained"
-                                                                onClick={() => handleApprove(u.id)}
-                                                            >
-                                                                Aprovar
-                                                            </Button>
-                                                        )}
-                                                        {u.status !== "blocked" && (
-                                                            <Button
-                                                                size="small"
-                                                                color="error"
-                                                                variant="outlined"
-                                                                onClick={() => handleBlock(u.id)}
-                                                            >
-                                                                Bloquear
-                                                            </Button>
-                                                        )}
-                                                    </Stack>
-                                                </Stack>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                    {!loadingUsers && users.length === 0 && (
-                                        <Typography color="text.secondary">
-                                            Nenhum usuário cadastrado.
-                                        </Typography>
-                                    )}
-                                </Stack>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                )}
+                            </Card>
+                        ))}
+                        {!loadingUsers && users.length === 0 && (
+                            <Typography color="text.secondary">
+                                Nenhum usuário cadastrado.
+                            </Typography>
+                        )}
+                    </Stack>
+                </Grid>
             </Grid>
         </Layout>
     );
