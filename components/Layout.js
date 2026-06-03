@@ -24,6 +24,7 @@ const publicLinks = [
     { href: "/", label: "Mensagem do Dia" },
     { href: "/events", label: "Eventos" },
     { href: "/confessions", label: "Confissões" },
+    { href: "/characters", label: "Personagens" },
 ];
 
 const protectedLinks = [
