@@ -15,6 +15,7 @@ import {
     Chip,
 } from "@mui/material";
 import Layout from "../components/Layout";
+import WhatsAppStatus from "../components/WhatsAppStatus";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/apiClient";
 
@@ -80,6 +81,7 @@ export default function AdminPage() {
 
     return (
         <Layout title="Gerenciar Usuários">
+            <WhatsAppStatus />
             <Grid container spacing={3}>
                 <Grid item xs={12}>
                     {loadingUsers && <LinearProgress sx={{ mb: 2 }} />}
