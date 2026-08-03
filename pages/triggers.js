@@ -32,10 +32,12 @@ import TuneIcon from "@mui/icons-material/Tune";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Layout from "../components/Layout";
+import GroupPicker from "../components/GroupPicker";
 import { api } from "../lib/apiClient";
 
 const emptyForm = {
     name: "",
+    groupId: "",
     phrases: "",
     matchType: "exact",
     caseSensitive: false,
@@ -363,6 +365,11 @@ function TriggerForm({
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                 size="small"
                 fullWidth
+            />
+
+            <GroupPicker
+                onSelect={(g) => setForm((p) => ({ ...p, groupId: g.id }))}
+                label={form.groupId ? `Grupo: ${form.groupId}` : "Escolher grupo"}
             />
 
             {/* ── Gatilho ───────────────────────────── */}
@@ -1092,6 +1099,7 @@ export default function TriggersPage() {
         setEditingId(trigger.id);
         setForm({
             name: trigger.name || "",
+            groupId: trigger.groupId || "",
             phrases: (trigger.phrases || []).join("\n"),
             matchType: trigger.matchType || "exact",
             caseSensitive: !!trigger.caseSensitive,
