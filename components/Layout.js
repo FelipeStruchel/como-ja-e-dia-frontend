@@ -31,6 +31,7 @@ const protectedLinks = [
     { href: "/triggers", label: "Triggers", role: "bom_dia_admin" },
     { href: "/logs", label: "Logs", role: "super_admin" },
     { href: "/admin", label: "Admin", role: "super_admin" },
+    { href: "/groups", label: "Grupos", role: "super_admin" },
     { href: "/persona", label: "Persona", role: "bom_dia_admin" },
     { href: "/schedules", label: "Agendamentos", role: "bom_dia_admin" },
 ];
