@@ -2,16 +2,10 @@ import useSWR from 'swr'
 import { Box, Chip, Typography } from '@mui/material'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import QrCode2Icon from '@mui/icons-material/QrCode2'
-
-async function fetchQr(url) {
-  const res = await fetch(url)
-  if (res.status === 404) return null
-  if (!res.ok) return null
-  return res.json()
-}
+import { api } from '../lib/apiClient'
 
 export default function WhatsAppStatus() {
-  const { data } = useSWR('/api/whatsapp-qr', fetchQr, {
+  const { data } = useSWR('whatsapp-qr', () => api.getWhatsAppQr(), {
     refreshInterval: 15_000,
     revalidateOnFocus: true,
   })
