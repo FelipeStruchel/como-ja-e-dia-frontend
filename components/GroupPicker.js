@@ -5,7 +5,7 @@ import { api } from "../lib/apiClient";
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 8; // ~15s
 
-export default function GroupPicker({ onSelect, label = "Escolher grupo" }) {
+export default function GroupPicker({ value = null, onSelect, label = "Escolher grupo" }) {
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -63,9 +63,11 @@ export default function GroupPicker({ onSelect, label = "Escolher grupo" }) {
                 <Autocomplete
                     sx={{ flex: 1 }}
                     options={groups}
+                    value={value}
+                    isOptionEqualToValue={(option, val) => option.id === val?.id}
                     getOptionLabel={(g) => `${g.subject || "(sem nome)"} — ${g.id}`}
                     loading={loading}
-                    onChange={(_, value) => value && onSelect(value)}
+                    onChange={(_, val) => onSelect(val)}
                     renderInput={(params) => (
                         <TextField
                             {...params}

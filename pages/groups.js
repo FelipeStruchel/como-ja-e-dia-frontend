@@ -47,7 +47,10 @@ export default function GroupsPage() {
     function refresh() {
         setLoadingGroups(true);
         api.getGroups()
-            .then((data) => setGroups(data || []))
+            .then((data) => {
+                setGroups(data || []);
+                setError("");
+            })
             .catch((err) => setError(err?.message || "Erro ao carregar grupos"))
             .finally(() => setLoadingGroups(false));
     }
@@ -58,26 +61,41 @@ export default function GroupsPage() {
     }, [user]);
 
     async function handleToggle(group, key) {
-        await api.updateGroup(group.id, { [key]: !group[key] });
-        setGroups((prev) =>
-            prev.map((g) => (g.id === group.id ? { ...g, [key]: !g[key] } : g))
-        );
+        setError("");
+        try {
+            await api.updateGroup(group.id, { [key]: !group[key] });
+            setGroups((prev) =>
+                prev.map((g) => (g.id === group.id ? { ...g, [key]: !g[key] } : g))
+            );
+        } catch (err) {
+            setError(err?.message || "Erro ao atualizar grupo");
+        }
     }
 
     async function handleDelete(id) {
-        await api.deleteGroup(id);
-        setGroups((prev) => prev.filter((g) => g.id !== id));
+        setError("");
+        try {
+            await api.deleteGroup(id);
+            setGroups((prev) => prev.filter((g) => g.id !== id));
+        } catch (err) {
+            setError(err?.message || "Erro ao remover grupo");
+        }
     }
 
     async function handleAdd() {
         if (!picked) return;
-        const created = await api.createGroup({
-            id: picked.id,
-            name: newName.trim() || picked.subject || picked.id,
-        });
-        setGroups((prev) => [...prev, created]);
-        setPicked(null);
-        setNewName("");
+        setError("");
+        try {
+            const created = await api.createGroup({
+                id: picked.id,
+                name: newName.trim() || picked.subject || picked.id,
+            });
+            setGroups((prev) => [...prev, created]);
+            setPicked(null);
+            setNewName("");
+        } catch (err) {
+            setError(err?.message || "Erro ao adicionar grupo");
+        }
     }
 
     if (loading || !user) return null;
@@ -95,7 +113,7 @@ export default function GroupsPage() {
                                 Adicionar grupo
                             </Typography>
                             <Stack spacing={1.5}>
-                                <GroupPicker onSelect={setPicked} label="Grupo do WhatsApp" />
+                                <GroupPicker value={picked} onSelect={setPicked} label="Grupo do WhatsApp" />
                                 <TextField
                                     label="Nome de exibição (opcional)"
                                     size="small"

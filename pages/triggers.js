@@ -368,7 +368,8 @@ function TriggerForm({
             />
 
             <GroupPicker
-                onSelect={(g) => setForm((p) => ({ ...p, groupId: g.id }))}
+                value={form.groupId ? { id: form.groupId, subject: "" } : null}
+                onSelect={(g) => setForm((p) => ({ ...p, groupId: g?.id || "" }))}
                 label={form.groupId ? `Grupo: ${form.groupId}` : "Escolher grupo"}
             />
 
@@ -1028,12 +1029,6 @@ export default function TriggersPage() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-    const groupId =
-        process.env.NEXT_PUBLIC_GROUP_ID ||
-        process.env.NEXT_PUBLIC_ALLOWED_PING_GROUP ||
-        process.env.NEXT_PUBLIC_GROUP ||
-        "";
-
     useEffect(() => {
         api.me()
             .then(() => setSessionOk(true))
@@ -1043,17 +1038,18 @@ export default function TriggersPage() {
 
     useEffect(() => {
         if (!sessionOk) return;
-        if (!groupId) {
-            setContextError("Defina NEXT_PUBLIC_GROUP_ID para carregar membros do grupo.");
+        if (!form.groupId) {
+            setContextMembers([]);
+            setContextError("");
             return;
         }
         setContextLoading(true);
         setContextError("");
-        api.getGroupContext(groupId)
+        api.getGroupContext(form.groupId)
             .then((ctx) => setContextMembers(ctx?.members || []))
             .catch((err) => setContextError(err?.message || "Erro ao carregar contexto"))
             .finally(() => setContextLoading(false));
-    }, [sessionOk, groupId]);
+    }, [sessionOk, form.groupId]);
 
     const loading = !triggers && !error;
 
@@ -1165,9 +1161,9 @@ export default function TriggersPage() {
     async function handleRefreshContext() {
         try {
             setContextLoading(true);
-            await api.refreshGroupContext(groupId);
+            await api.refreshGroupContext(form.groupId);
             try {
-                const ctx = await api.getGroupContext(groupId);
+                const ctx = await api.getGroupContext(form.groupId);
                 setContextMembers(ctx?.members || []);
             } catch (_) {}
             setContextError("");
@@ -1204,7 +1200,7 @@ export default function TriggersPage() {
         onCancelEdit: handleCancelEdit,
         status, uploading,
         onUpload: handleUpload,
-        contextMembers, contextLoading, contextError, groupId,
+        contextMembers, contextLoading, contextError, groupId: form.groupId,
         onRefreshContext: handleRefreshContext,
     };
 
