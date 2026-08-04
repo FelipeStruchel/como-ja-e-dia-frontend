@@ -12,11 +12,13 @@ import {
     LinearProgress,
     Button,
     TextField,
+    Divider,
 } from "@mui/material";
 import Layout from "../components/Layout";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/apiClient";
 import GroupPicker from "../components/GroupPicker";
+import GroupAdmins from "../components/GroupAdmins";
 
 const FEATURES = [
     { key: "pokemonEnabled", label: "Pokémon" },
@@ -161,6 +163,8 @@ export default function GroupsPage() {
                                             Remover
                                         </Button>
                                     </Stack>
+                                    <Divider sx={{ my: 1.5 }} />
+                                    <GroupAdmins groupId={g.id} />
                                 </CardContent>
                             </Card>
                         ))}
