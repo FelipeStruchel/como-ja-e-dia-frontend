@@ -7,12 +7,15 @@ import {
     Card,
     CardActions,
     CardContent,
+    Checkbox,
     Chip,
     Grid,
     FormControl,
     FormControlLabel,
     InputLabel,
+    ListItemText,
     MenuItem,
+    OutlinedInput,
     Select,
     Stack,
     Switch,
@@ -21,8 +24,11 @@ import {
 } from "@mui/material";
 import Layout from "../components/Layout";
 import { api } from "../lib/apiClient";
+import { useAuth } from "../lib/auth";
+import { resolvePickerGroups } from "../lib/groupPicker";
 
 const fetcher = () => api.getSchedules();
+const BROADCAST_VALUE = "__broadcast__";
 
 const emptyForm = {
     name: "",
@@ -87,12 +93,21 @@ const buildPublicUrl = (url = "") => {
 
 export default function SchedulesPage() {
     const { data: schedules, mutate, error } = useSWR("/api/schedules", fetcher);
+    const { hasRole } = useAuth();
+    const isSuperAdmin = hasRole("super_admin");
+    const { data: myGroups, isLoading: myGroupsLoading } = useSWR("my-groups", () =>
+        api.getMyGroups()
+    );
+    const { eligible, needsPicker, singleGroupId, canBroadcastGlobally } =
+        resolvePickerGroups(myGroups || [], isSuperAdmin, "scheduledGreetingsEnabled");
+
     const [authChecked, setAuthChecked] = useState(false);
     const [sessionOk, setSessionOk] = useState(true);
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState(null);
     const [status, setStatus] = useState({ type: "idle", message: "" });
     const [uploading, setUploading] = useState(false);
+    const [selectedGroupIds, setSelectedGroupIds] = useState([]);
 
     useEffect(() => {
         api.me()
@@ -100,6 +115,45 @@ export default function SchedulesPage() {
             .catch(() => setSessionOk(false))
             .finally(() => setAuthChecked(true));
     }, []);
+
+    const isSubmitting = status.type === "loading";
+    const noEligibleGroups = !myGroupsLoading && eligible.length === 0;
+    // The group picker only governs *creating* a new schedule (which group(s)
+    // it applies to); editing an existing schedule doesn't touch its group.
+    const formDisabled = isSubmitting || (!editingId && (myGroupsLoading || noEligibleGroups));
+
+    function handleGroupSelectChange(e) {
+        const value = e.target.value;
+        const values = typeof value === "string" ? value.split(",") : value;
+        if (values.includes(BROADCAST_VALUE)) {
+            if (!selectedGroupIds.includes(BROADCAST_VALUE)) {
+                // Broadcast was just selected: it's exclusive, drop everything else.
+                setSelectedGroupIds([BROADCAST_VALUE]);
+            } else {
+                // Broadcast was already selected and the user picked something
+                // else: drop broadcast, keep the newly picked groups.
+                setSelectedGroupIds(values.filter((v) => v !== BROADCAST_VALUE));
+            }
+        } else {
+            setSelectedGroupIds(values);
+        }
+    }
+
+    function handleSelectAllGroups() {
+        // "Apply to N of my groups" is the expected, common case for
+        // schedules (same recurring content going out to several groups),
+        // so offer a one-click convenience to select every eligible group.
+        setSelectedGroupIds(eligible.map((g) => g.id));
+    }
+
+    function renderGroupSelectValue(selected) {
+        if (selected.includes(BROADCAST_VALUE)) {
+            return "Todos os grupos (atual e futuros)";
+        }
+        return selected
+            .map((id) => eligible.find((g) => g.id === id)?.name || id)
+            .join(", ");
+    }
 
     const parsedForm = useMemo(() => {
         const finalType =
@@ -117,17 +171,93 @@ export default function SchedulesPage() {
 
     async function handleSave(e) {
         e?.preventDefault();
+
+        if (!editingId && noEligibleGroups) {
+            setStatus({
+                type: "error",
+                message: "Você não administra nenhum grupo com saudações agendadas habilitadas.",
+            });
+            return;
+        }
+
+        let broadcast = false;
+        let targetGroupIds = [];
+        if (!editingId) {
+            if (needsPicker) {
+                if (selectedGroupIds.includes(BROADCAST_VALUE)) {
+                    broadcast = true;
+                } else if (selectedGroupIds.length === 0) {
+                    setStatus({ type: "error", message: "Selecione ao menos um grupo" });
+                    return;
+                } else {
+                    targetGroupIds = selectedGroupIds;
+                }
+            } else {
+                targetGroupIds = [singleGroupId];
+            }
+        }
+
         try {
             setStatus({ type: "loading", message: "Salvando..." });
+
             if (editingId) {
+                // Editing an existing schedule doesn't reassign its group.
                 await api.updateSchedule(editingId, parsedForm);
-            } else {
-                await api.createSchedule(parsedForm);
+                setForm(emptyForm);
+                setEditingId(null);
+                await mutate();
+                setStatus({ type: "success", message: "Agendamento salvo" });
+                return;
             }
-            setForm(emptyForm);
-            setEditingId(null);
+
+            if (broadcast) {
+                await api.createSchedule({ ...parsedForm, groupId: null });
+                await mutate();
+                setForm(emptyForm);
+                setSelectedGroupIds([]);
+                setStatus({ type: "success", message: "Agendamento salvo" });
+                return;
+            }
+
+            // One independent createSchedule call per selected group — never a
+            // single call with an array of ids, there is no bulk-create endpoint.
+            const results = await Promise.allSettled(
+                targetGroupIds.map((groupId) =>
+                    api.createSchedule({ ...parsedForm, groupId })
+                )
+            );
+            const failedGroupIds = results
+                .map((r, i) => (r.status === "rejected" ? targetGroupIds[i] : null))
+                .filter(Boolean);
+
+            if (failedGroupIds.length === results.length) {
+                // Total failure: nothing was created, so there's nothing to
+                // refresh and nothing to clear from the selection — safe to
+                // throw straight to the catch block below.
+                const firstFailure = results.find((r) => r.status === "rejected");
+                throw new Error(firstFailure?.reason?.message || "Erro ao salvar");
+            }
+
+            // At least one call succeeded: refresh the schedules list so the
+            // successfully-created row(s) show up right away, even though
+            // some calls in this batch failed.
             await mutate();
-            setStatus({ type: "success", message: "Agendamento salvo" });
+
+            if (failedGroupIds.length > 0) {
+                // Partial failure: keep the form fields and only the
+                // still-failed groups selected, so clicking save again
+                // retries just the groups that didn't succeed instead of
+                // re-creating duplicate schedules for the ones that did.
+                setSelectedGroupIds(failedGroupIds);
+                setStatus({
+                    type: "warning",
+                    message: `Agendamento criado em ${results.length - failedGroupIds.length} de ${results.length} grupos; ${failedGroupIds.length} falharam`,
+                });
+            } else {
+                setForm(emptyForm);
+                setSelectedGroupIds([]);
+                setStatus({ type: "success", message: "Agendamento salvo" });
+            }
         } catch (err) {
             setStatus({
                 type: "error",
@@ -234,6 +364,67 @@ export default function SchedulesPage() {
                                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                                     required
                                 />
+                                {!editingId && noEligibleGroups && (
+                                    <Alert severity="warning">
+                                        Você não administra nenhum grupo com saudações
+                                        agendadas habilitadas.
+                                    </Alert>
+                                )}
+                                {!editingId && needsPicker && (
+                                    <Stack spacing={1}>
+                                        <FormControl fullWidth disabled={formDisabled}>
+                                            <InputLabel id="schedule-groups-label">
+                                                Grupos
+                                            </InputLabel>
+                                            <Select
+                                                labelId="schedule-groups-label"
+                                                multiple
+                                                value={selectedGroupIds}
+                                                onChange={handleGroupSelectChange}
+                                                input={<OutlinedInput label="Grupos" />}
+                                                renderValue={renderGroupSelectValue}
+                                            >
+                                                {canBroadcastGlobally && (
+                                                    <MenuItem value={BROADCAST_VALUE}>
+                                                        <Checkbox
+                                                            checked={selectedGroupIds.includes(
+                                                                BROADCAST_VALUE
+                                                            )}
+                                                        />
+                                                        <ListItemText primary="Todos os grupos (atual e futuros)" />
+                                                    </MenuItem>
+                                                )}
+                                                {eligible.map((g) => (
+                                                    <MenuItem key={g.id} value={g.id}>
+                                                        <Checkbox
+                                                            checked={selectedGroupIds.includes(
+                                                                g.id
+                                                            )}
+                                                        />
+                                                        <ListItemText
+                                                            primary={g.name || g.id}
+                                                        />
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        {!selectedGroupIds.includes(BROADCAST_VALUE) && (
+                                            <Button
+                                                size="small"
+                                                onClick={handleSelectAllGroups}
+                                                disabled={formDisabled}
+                                                sx={{ alignSelf: "flex-start" }}
+                                            >
+                                                Selecionar todos os meus grupos
+                                            </Button>
+                                        )}
+                                    </Stack>
+                                )}
+                                {!editingId && !needsPicker && eligible.length === 1 && (
+                                    <Typography variant="caption" color="text.secondary">
+                                        Grupo: {eligible[0].name || eligible[0].id}
+                                    </Typography>
+                                )}
                                 <FormControl fullWidth>
                                     <InputLabel>Conteudo</InputLabel>
                                     <Select
@@ -445,7 +636,12 @@ export default function SchedulesPage() {
                                     label="Ativo"
                                 />
                                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                                    <Button variant="contained" onClick={handleSave} fullWidth>
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleSave}
+                                        fullWidth
+                                        disabled={formDisabled}
+                                    >
                                         {editingId ? "Salvar alteracoes" : "Criar agendamento"}
                                     </Button>
                                     {editingId && (
@@ -461,7 +657,15 @@ export default function SchedulesPage() {
                                     )}
                                 </Stack>
                                 {status.type !== "idle" && status.message && (
-                                    <Alert severity={status.type === "error" ? "error" : "success"}>
+                                    <Alert
+                                        severity={
+                                            status.type === "error"
+                                                ? "error"
+                                                : status.type === "warning"
+                                                ? "warning"
+                                                : "success"
+                                        }
+                                    >
                                         {status.message}
                                     </Alert>
                                 )}
