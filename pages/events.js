@@ -111,31 +111,56 @@ export default function EventsPage() {
 
             if (broadcast) {
                 await api.createEvent({ name: trimmedName, date: iso, groupId: null });
-            } else {
-                // One independent createEvent call per selected group — never a
-                // single call with an array of ids, there is no bulk-create endpoint.
-                const results = await Promise.allSettled(
-                    targetGroupIds.map((groupId) =>
-                        api.createEvent({ name: trimmedName, date: iso, groupId })
-                    )
-                );
-                const failures = results.filter((r) => r.status === "rejected");
-                if (failures.length > 0) {
-                    const allFailed = failures.length === results.length;
-                    throw new Error(
-                        allFailed
-                            ? failures[0].reason?.message || "Erro ao criar evento"
-                            : `Evento criado em ${results.length - failures.length} de ${results.length} grupos; ${failures.length} falharam`
-                    );
-                }
+                await mutate();
+                setName("");
+                setDate("");
+                setTime("00:00");
+                setSelectedGroupIds([]);
+                setStatus({ type: "success", message: "Evento criado" });
+                return;
             }
 
-            setName("");
-            setDate("");
-            setTime("00:00");
-            setSelectedGroupIds([]);
+            // One independent createEvent call per selected group — never a
+            // single call with an array of ids, there is no bulk-create endpoint.
+            const results = await Promise.allSettled(
+                targetGroupIds.map((groupId) =>
+                    api.createEvent({ name: trimmedName, date: iso, groupId })
+                )
+            );
+            const failedGroupIds = results
+                .map((r, i) => (r.status === "rejected" ? targetGroupIds[i] : null))
+                .filter(Boolean);
+
+            if (failedGroupIds.length === results.length) {
+                // Total failure: nothing was created, so there's nothing to
+                // refresh and nothing to clear from the selection — safe to
+                // throw straight to the catch block below.
+                const firstFailure = results.find((r) => r.status === "rejected");
+                throw new Error(firstFailure?.reason?.message || "Erro ao criar evento");
+            }
+
+            // At least one call succeeded: refresh the events list so the
+            // successfully-created row(s) show up right away, even though
+            // some calls in this batch failed.
             await mutate();
-            setStatus({ type: "success", message: "Evento criado" });
+
+            if (failedGroupIds.length > 0) {
+                // Partial failure: keep the form fields and only the
+                // still-failed groups selected, so clicking "Criar evento"
+                // again retries just the groups that didn't succeed instead
+                // of re-creating duplicate events for the ones that did.
+                setSelectedGroupIds(failedGroupIds);
+                setStatus({
+                    type: "warning",
+                    message: `Evento criado em ${results.length - failedGroupIds.length} de ${results.length} grupos; ${failedGroupIds.length} falharam`,
+                });
+            } else {
+                setName("");
+                setDate("");
+                setTime("00:00");
+                setSelectedGroupIds([]);
+                setStatus({ type: "success", message: "Evento criado" });
+            }
         } catch (err) {
             setStatus({
                 type: "error",
@@ -314,7 +339,13 @@ export default function EventsPage() {
             </Grid>
             {status.type !== "idle" && status.message && (
                 <Alert
-                    severity={status.type === "error" ? "error" : "success"}
+                    severity={
+                        status.type === "error"
+                            ? "error"
+                            : status.type === "warning"
+                            ? "warning"
+                            : "success"
+                    }
                     sx={{ mt: 3 }}
                 >
                     {status.message}
