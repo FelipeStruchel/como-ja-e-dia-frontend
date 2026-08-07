@@ -65,6 +65,10 @@ export default function PersonaPage() {
 
     const [loading, setLoading] = useState(true);
     const [prompt, setPrompt] = useState("");
+    // Tracks the prompt exactly as last fetched/saved for the currently
+    // selected group, so we can tell whether `prompt` has unsaved edits
+    // before letting the switcher silently blow them away.
+    const [lastLoadedPrompt, setLastLoadedPrompt] = useState("");
     const [defaultPrompt, setDefaultPrompt] = useState("");
     const [status, setStatus] = useState({ type: "idle", message: "" });
 
@@ -80,6 +84,7 @@ export default function PersonaPage() {
         api.getPersona(selectedGroupId)
             .then((res) => {
                 setPrompt(res?.prompt || "");
+                setLastLoadedPrompt(res?.prompt || "");
                 setDefaultPrompt(res?.default || "");
             })
             .catch((err) => {
@@ -92,7 +97,9 @@ export default function PersonaPage() {
         try {
             setStatus({ type: "loading", message: "Validando e salvando..." });
             const res = await api.updatePersona(selectedGroupId, prompt);
-            setPrompt(res?.prompt || prompt);
+            const saved = res?.prompt || prompt;
+            setPrompt(saved);
+            setLastLoadedPrompt(saved);
             setStatus({ type: "success", message: "Persona salva" });
         } catch (err) {
             setStatus({
@@ -102,6 +109,17 @@ export default function PersonaPage() {
         } finally {
             setTimeout(() => setStatus({ type: "idle", message: "" }), 3000);
         }
+    }
+
+    function handleGroupSwitch(newGroupId) {
+        if (newGroupId === selectedGroupId) return;
+        const isDirty = prompt !== lastLoadedPrompt;
+        if (isDirty && !confirm("Você tem alterações não salvas na persona deste grupo. Trocar de grupo agora vai descartá-las. Continuar?")) {
+            // Cancelled: selectedGroupId is left untouched, so the
+            // controlled <Select> naturally snaps back to the prior value.
+            return;
+        }
+        setSelectedGroupId(newGroupId);
     }
 
     if (!sessionOk) {
@@ -139,7 +157,7 @@ export default function PersonaPage() {
                                     labelId="persona-group-label"
                                     label="Grupo"
                                     value={selectedGroupId}
-                                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                                    onChange={(e) => handleGroupSwitch(e.target.value)}
                                 >
                                     {options.map((opt) => (
                                         <MenuItem key={opt.id ?? "__global__"} value={opt.id}>
