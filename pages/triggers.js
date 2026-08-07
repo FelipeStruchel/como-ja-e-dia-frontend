@@ -11,11 +11,18 @@ import {
     Button,
     Card,
     CardContent,
+    Checkbox,
     Chip,
     CircularProgress,
     Divider,
     Fab,
+    FormControl,
     Grid,
+    InputLabel,
+    ListItemText,
+    MenuItem,
+    OutlinedInput,
+    Select,
     Slider,
     Stack,
     Tab,
@@ -32,8 +39,9 @@ import TuneIcon from "@mui/icons-material/Tune";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Layout from "../components/Layout";
-import GroupPicker from "../components/GroupPicker";
 import { api } from "../lib/apiClient";
+import { useAuth } from "../lib/auth";
+import { resolvePickerGroups } from "../lib/groupPicker";
 
 const emptyForm = {
     name: "",
@@ -349,6 +357,9 @@ function TriggerForm({
     status, uploading, onUpload,
     contextMembers, contextLoading, contextError, groupId,
     onRefreshContext,
+    eligible, needsPicker, noEligibleGroups, myGroupsLoading,
+    selectedGroupIds, onGroupSelectChange, onSelectAllGroups,
+    editingGroupLabel, formDisabled,
 }) {
     const activeBg = (cond) => cond
         ? "rgba(15,118,110,0.07)"
@@ -367,11 +378,59 @@ function TriggerForm({
                 fullWidth
             />
 
-            <GroupPicker
-                value={form.groupId ? { id: form.groupId, subject: "" } : null}
-                onSelect={(g) => setForm((p) => ({ ...p, groupId: g?.id || "" }))}
-                label={form.groupId ? `Grupo: ${form.groupId}` : "Escolher grupo"}
-            />
+            {/* Trigger.groupId é obrigatório e não tem conceito de "broadcast
+                global" — mesmo super_admin precisa escolher grupo(s)
+                existentes específicos. O picker só governa a *criação*;
+                editar uma trigger existente não reatribui seu grupo. */}
+            {!editingId && noEligibleGroups && (
+                <Alert severity="warning">
+                    Você não administra nenhum grupo com triggers habilitadas.
+                </Alert>
+            )}
+            {!editingId && needsPicker && (
+                <Stack spacing={1}>
+                    <FormControl fullWidth size="small" disabled={myGroupsLoading}>
+                        <InputLabel id="trigger-groups-label">Grupos</InputLabel>
+                        <Select
+                            labelId="trigger-groups-label"
+                            multiple
+                            value={selectedGroupIds}
+                            onChange={onGroupSelectChange}
+                            input={<OutlinedInput label="Grupos" />}
+                            renderValue={(selected) =>
+                                selected
+                                    .map((id) => eligible.find((g) => g.id === id)?.name || id)
+                                    .join(", ")
+                            }
+                        >
+                            {eligible.map((g) => (
+                                <MenuItem key={g.id} value={g.id}>
+                                    <Checkbox checked={selectedGroupIds.includes(g.id)} />
+                                    <ListItemText primary={g.name || g.id} />
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <Button
+                        size="small"
+                        onClick={onSelectAllGroups}
+                        disabled={myGroupsLoading}
+                        sx={{ alignSelf: "flex-start" }}
+                    >
+                        Selecionar todos os meus grupos
+                    </Button>
+                </Stack>
+            )}
+            {!editingId && !needsPicker && eligible.length === 1 && (
+                <Typography variant="caption" color="text.secondary">
+                    Grupo: {eligible[0].name || eligible[0].id}
+                </Typography>
+            )}
+            {editingId && (
+                <Typography variant="caption" color="text.secondary">
+                    Grupo: {editingGroupLabel}
+                </Typography>
+            )}
 
             {/* ── Gatilho ───────────────────────────── */}
             <Box>
@@ -993,6 +1052,7 @@ function TriggerForm({
                     fullWidth
                     size="large"
                     sx={{ fontWeight: 700 }}
+                    disabled={formDisabled}
                 >
                     {editingId ? "Salvar alterações" : "Criar trigger"}
                 </Button>
@@ -1015,6 +1075,21 @@ function TriggerForm({
 // ── Página principal ─────────────────────────────────────
 export default function TriggersPage() {
     const { data: triggers, mutate, error } = useSWR("/api/triggers", fetcher);
+    const { hasRole } = useAuth();
+    const isSuperAdmin = hasRole("super_admin");
+    const { data: myGroups, isLoading: myGroupsLoading } = useSWR("my-groups", () =>
+        api.getMyGroups()
+    );
+    // Unlike Event/Schedule, Trigger.groupId is required/NOT NULL — there is
+    // no "broadcast globally" concept here, so canBroadcastGlobally from the
+    // resolver is intentionally ignored: even super_admin must pick one or
+    // more specific existing groups.
+    const { eligible, needsPicker, singleGroupId } = resolvePickerGroups(
+        myGroups || [],
+        isSuperAdmin,
+        "triggersEnabled"
+    );
+
     const [authChecked, setAuthChecked] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState(null);
@@ -1025,6 +1100,7 @@ export default function TriggersPage() {
     const [contextLoading, setContextLoading] = useState(false);
     const [contextError, setContextError] = useState("");
     const [mobileTab, setMobileTab] = useState(0);
+    const [selectedGroupIds, setSelectedGroupIds] = useState([]);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -1036,20 +1112,45 @@ export default function TriggersPage() {
             .finally(() => setAuthChecked(true));
     }, []);
 
+    const isSubmitting = status.type === "loading";
+    const noEligibleGroups = !myGroupsLoading && eligible.length === 0;
+    // The group picker only governs *creating* a new trigger (which
+    // group(s) it applies to); editing an existing trigger doesn't touch
+    // its group, same as Schedules/Events.
+    const formDisabled = isSubmitting || (!editingId && (myGroupsLoading || noEligibleGroups));
+
+    // Group used to fetch member suggestions for the "restrito a pessoas
+    // específicas" picker: the trigger's own group while editing, otherwise
+    // the first group currently selected for creation (or the sole eligible
+    // one when no picker is needed).
+    const primaryGroupId = editingId
+        ? form.groupId
+        : selectedGroupIds[0] || singleGroupId || "";
+
+    function handleGroupSelectChange(e) {
+        const value = e.target.value;
+        const values = typeof value === "string" ? value.split(",") : value;
+        setSelectedGroupIds(values);
+    }
+
+    function handleSelectAllGroups() {
+        setSelectedGroupIds(eligible.map((g) => g.id));
+    }
+
     useEffect(() => {
         if (!sessionOk) return;
-        if (!form.groupId) {
+        if (!primaryGroupId) {
             setContextMembers([]);
             setContextError("");
             return;
         }
         setContextLoading(true);
         setContextError("");
-        api.getGroupContext(form.groupId)
+        api.getGroupContext(primaryGroupId)
             .then((ctx) => setContextMembers(ctx?.members || []))
             .catch((err) => setContextError(err?.message || "Erro ao carregar contexto"))
             .finally(() => setContextLoading(false));
-    }, [sessionOk, form.groupId]);
+    }, [sessionOk, primaryGroupId]);
 
     const loading = !triggers && !error;
 
@@ -1072,18 +1173,83 @@ export default function TriggersPage() {
 
     async function handleSave(e) {
         e?.preventDefault();
+
+        if (!editingId && noEligibleGroups) {
+            setStatus({
+                type: "error",
+                message: "Você não administra nenhum grupo com triggers habilitadas.",
+            });
+            return;
+        }
+
+        let targetGroupIds = [];
+        if (!editingId) {
+            if (needsPicker) {
+                if (selectedGroupIds.length === 0) {
+                    setStatus({ type: "error", message: "Selecione ao menos um grupo" });
+                    return;
+                }
+                targetGroupIds = selectedGroupIds;
+            } else {
+                targetGroupIds = [singleGroupId];
+            }
+        }
+
         try {
             setStatus({ type: "loading", message: "Salvando trigger..." });
+
             if (editingId) {
+                // Editing an existing trigger doesn't reassign its group.
                 await api.updateTrigger(editingId, parsedForm);
-            } else {
-                await api.createTrigger(parsedForm);
+                setForm(emptyForm);
+                setEditingId(null);
+                await mutate();
+                setStatus({ type: "success", message: "Trigger salva" });
+                if (isMobile) setMobileTab(0);
+                return;
             }
-            setForm(emptyForm);
-            setEditingId(null);
+
+            // One independent createTrigger call per selected group — never
+            // a single call with an array of ids, there is no bulk-create
+            // endpoint. Each call is independently authorized.
+            const results = await Promise.allSettled(
+                targetGroupIds.map((groupId) =>
+                    api.createTrigger({ ...parsedForm, groupId })
+                )
+            );
+            const failedGroupIds = results
+                .map((r, i) => (r.status === "rejected" ? targetGroupIds[i] : null))
+                .filter(Boolean);
+
+            if (failedGroupIds.length === results.length) {
+                // Total failure: nothing was created, so there's nothing to
+                // refresh and nothing to clear from the selection — safe to
+                // throw straight to the catch block below.
+                const firstFailure = results.find((r) => r.status === "rejected");
+                throw new Error(firstFailure?.reason?.message || "Erro ao salvar trigger");
+            }
+
+            // At least one call succeeded: refresh the triggers list so the
+            // successfully-created row(s) show up right away, even though
+            // some calls in this batch failed.
             await mutate();
-            setStatus({ type: "success", message: "Trigger salva" });
-            if (isMobile) setMobileTab(0);
+
+            if (failedGroupIds.length > 0) {
+                // Partial failure: keep the form fields and only the
+                // still-failed groups selected, so clicking save again
+                // retries just the groups that didn't succeed instead of
+                // re-creating duplicate triggers for the ones that did.
+                setSelectedGroupIds(failedGroupIds);
+                setStatus({
+                    type: "warning",
+                    message: `Trigger criada em ${results.length - failedGroupIds.length} de ${results.length} grupos; ${failedGroupIds.length} falharam`,
+                });
+            } else {
+                setForm(emptyForm);
+                setSelectedGroupIds([]);
+                setStatus({ type: "success", message: "Trigger salva" });
+                if (isMobile) setMobileTab(0);
+            }
         } catch (err) {
             setStatus({ type: "error", message: err?.message || "Erro ao salvar trigger" });
         } finally {
@@ -1161,9 +1327,9 @@ export default function TriggersPage() {
     async function handleRefreshContext() {
         try {
             setContextLoading(true);
-            await api.refreshGroupContext(form.groupId);
+            await api.refreshGroupContext(primaryGroupId);
             try {
-                const ctx = await api.getGroupContext(form.groupId);
+                const ctx = await api.getGroupContext(primaryGroupId);
                 setContextMembers(ctx?.members || []);
             } catch (_) {}
             setContextError("");
@@ -1200,8 +1366,14 @@ export default function TriggersPage() {
         onCancelEdit: handleCancelEdit,
         status, uploading,
         onUpload: handleUpload,
-        contextMembers, contextLoading, contextError, groupId: form.groupId,
+        contextMembers, contextLoading, contextError, groupId: primaryGroupId,
         onRefreshContext: handleRefreshContext,
+        eligible, needsPicker, noEligibleGroups, myGroupsLoading,
+        selectedGroupIds, onGroupSelectChange: handleGroupSelectChange,
+        onSelectAllGroups: handleSelectAllGroups,
+        editingGroupLabel:
+            (myGroups || []).find((g) => g.id === form.groupId)?.name || form.groupId,
+        formDisabled,
     };
 
     // ── Lista de triggers ─────────────────────────
