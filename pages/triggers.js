@@ -359,8 +359,13 @@ function TriggerForm({
     onRefreshContext,
     eligible, needsPicker, noEligibleGroups, myGroupsLoading,
     selectedGroupIds, onGroupSelectChange, onSelectAllGroups,
-    editingGroupLabel, formDisabled,
+    editingGroupLabel, formDisabled, onToggleRestrictByUsers,
 }) {
+    // Restrito a pessoas específicas is sourced from a single group's member
+    // list (contextMembers); when restricting is on, the group picker must
+    // be locked to that one group so a multi-group create can never submit
+    // the same allowedUsers list against a group it wasn't fetched from.
+    const groupPickerLockedByRestriction = !editingId && form.restrictByUsers && needsPicker;
     const activeBg = (cond) => cond
         ? "rgba(15,118,110,0.07)"
         : "grey.50";
@@ -389,7 +394,11 @@ function TriggerForm({
             )}
             {!editingId && needsPicker && (
                 <Stack spacing={1}>
-                    <FormControl fullWidth size="small" disabled={myGroupsLoading}>
+                    <FormControl
+                        fullWidth
+                        size="small"
+                        disabled={myGroupsLoading || groupPickerLockedByRestriction}
+                    >
                         <InputLabel id="trigger-groups-label">Grupos</InputLabel>
                         <Select
                             labelId="trigger-groups-label"
@@ -411,10 +420,16 @@ function TriggerForm({
                             ))}
                         </Select>
                     </FormControl>
+                    {groupPickerLockedByRestriction && (
+                        <Typography variant="caption" color="text.secondary">
+                            Restrição por pessoas só funciona com um grupo por vez — desative
+                            "Restrito a pessoas específicas" para escolher outros grupos.
+                        </Typography>
+                    )}
                     <Button
                         size="small"
                         onClick={onSelectAllGroups}
-                        disabled={myGroupsLoading}
+                        disabled={myGroupsLoading || groupPickerLockedByRestriction}
                         sx={{ alignSelf: "flex-start" }}
                     >
                         Selecionar todos os meus grupos
@@ -874,13 +889,7 @@ function TriggerForm({
                         {/* Restrição de usuários */}
                         <Box>
                             <Box
-                                onClick={() =>
-                                    setForm((p) => ({
-                                        ...p,
-                                        restrictByUsers: !p.restrictByUsers,
-                                        allowedUsers: !p.restrictByUsers ? p.allowedUsers : [],
-                                    }))
-                                }
+                                onClick={onToggleRestrictByUsers}
                                 sx={{
                                     display: "flex",
                                     alignItems: "center",
@@ -1064,7 +1073,16 @@ function TriggerForm({
             </Stack>
 
             {status.type !== "idle" && status.message && (
-                <Alert severity={status.type === "error" ? "error" : "success"} sx={{ py: 0.5 }}>
+                <Alert
+                    severity={
+                        status.type === "error"
+                            ? "error"
+                            : status.type === "warning"
+                            ? "warning"
+                            : "success"
+                    }
+                    sx={{ py: 0.5 }}
+                >
                     {status.message}
                 </Alert>
             )}
@@ -1137,6 +1155,26 @@ export default function TriggersPage() {
         setSelectedGroupIds(eligible.map((g) => g.id));
     }
 
+    function handleToggleRestrictByUsers() {
+        // contextMembers (and therefore allowedUsers) is only ever sourced
+        // from one group's member list. Turning restriction on while
+        // multiple groups are selected would otherwise let the exact same
+        // allowedUsers id list get submitted verbatim against groups it
+        // wasn't fetched from, where it can never match anyone — so collapse
+        // the selection to the first group and lock the picker (see
+        // groupPickerLockedByRestriction in TriggerForm) for as long as the
+        // restriction stays on.
+        const turningOn = !form.restrictByUsers;
+        setForm((p) => ({
+            ...p,
+            restrictByUsers: turningOn,
+            allowedUsers: turningOn ? p.allowedUsers : [],
+        }));
+        if (turningOn && selectedGroupIds.length > 1) {
+            setSelectedGroupIds([selectedGroupIds[0]]);
+        }
+    }
+
     useEffect(() => {
         if (!sessionOk) return;
         if (!primaryGroupId) {
@@ -1193,6 +1231,16 @@ export default function TriggersPage() {
             } else {
                 targetGroupIds = [singleGroupId];
             }
+        }
+
+        // Defensive clamp: restrictByUsers' allowedUsers is only ever valid
+        // for the single group its member list was fetched from. The UI
+        // already locks the group picker to one group once restriction is
+        // on, but this guarantees it's structurally impossible to submit a
+        // restricted createTrigger call against more than one group even if
+        // that lock is ever bypassed.
+        if (!editingId && form.restrictByUsers && targetGroupIds.length > 1) {
+            targetGroupIds = [targetGroupIds[0]];
         }
 
         try {
@@ -1371,6 +1419,7 @@ export default function TriggersPage() {
         eligible, needsPicker, noEligibleGroups, myGroupsLoading,
         selectedGroupIds, onGroupSelectChange: handleGroupSelectChange,
         onSelectAllGroups: handleSelectAllGroups,
+        onToggleRestrictByUsers: handleToggleRestrictByUsers,
         editingGroupLabel:
             (myGroups || []).find((g) => g.id === form.groupId)?.name || form.groupId,
         formDisabled,
