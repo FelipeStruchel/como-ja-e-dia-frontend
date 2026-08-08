@@ -1,4 +1,5 @@
 import { useState } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -19,6 +20,7 @@ import { useTheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import { useAuth } from "../lib/auth";
+import { api } from "../lib/apiClient";
 
 const publicLinks = [
     { href: "/", label: "Mensagem do Dia" },
@@ -27,13 +29,20 @@ const publicLinks = [
     { href: "/characters", label: "Personagens" },
 ];
 
+// `requiresGroupAdmin` links are visible to super_admin OR any user who
+// administers at least one group (adminGroupIds / GET /groups/mine is
+// non-empty), regardless of which per-group feature flags are enabled —
+// the pages themselves handle "0 eligible groups for this feature"
+// gracefully via resolvePickerGroups. This replaces the retired global
+// `bom_dia_admin` role, whose UserRole assignments are being deleted now
+// that the backend actually runs its migrations.
 const protectedLinks = [
-    { href: "/triggers", label: "Triggers", role: "bom_dia_admin" },
+    { href: "/triggers", label: "Triggers", requiresGroupAdmin: true },
     { href: "/logs", label: "Logs", role: "super_admin" },
     { href: "/admin", label: "Admin", role: "super_admin" },
     { href: "/groups", label: "Grupos", role: "super_admin" },
-    { href: "/persona", label: "Persona", role: "bom_dia_admin" },
-    { href: "/schedules", label: "Agendamentos", role: "bom_dia_admin" },
+    { href: "/persona", label: "Persona", requiresGroupAdmin: true },
+    { href: "/schedules", label: "Agendamentos", requiresGroupAdmin: true },
 ];
 
 export default function Layout({ children, title }) {
@@ -42,8 +51,19 @@ export default function Layout({ children, title }) {
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [drawerOpen, setDrawerOpen] = useState(false);
 
+    // Same SWR key ("my-groups") the group-scoped admin pages already use
+    // for GET /groups/mine, so the request is deduped/cached across the app
+    // instead of firing an extra call on top of theirs.
+    const { data: myGroups } = useSWR(user ? "my-groups" : null, () => api.getMyGroups());
+    const hasAnyGroupAdmin = Array.isArray(myGroups) && myGroups.length > 0;
+
+    function canSeeLink(link) {
+        if (link.requiresGroupAdmin) return hasRole("super_admin") || hasAnyGroupAdmin;
+        return hasRole(link.role);
+    }
+
     const navLinks = user
-        ? [...publicLinks, ...protectedLinks.filter((link) => hasRole(link.role))]
+        ? [...publicLinks, ...protectedLinks.filter((link) => canSeeLink(link))]
         : publicLinks;
 
     function toggleDrawer(open) {
