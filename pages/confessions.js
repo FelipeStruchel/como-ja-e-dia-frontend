@@ -13,6 +13,7 @@ export default function ConfessionsPage() {
     const [groups, setGroups] = useState([]);
     const [groupId, setGroupId] = useState("");
     const [loadingGroups, setLoadingGroups] = useState(true);
+    const [groupsError, setGroupsError] = useState(false);
     const [status, setStatus] = useState({ type: "idle", message: "" });
 
     const isSending = status.type === "loading";
@@ -20,7 +21,11 @@ export default function ConfessionsPage() {
     useEffect(() => {
         api.getConfessionGroups()
             .then((data) => setGroups(data || []))
-            .catch(() => setGroups([]))
+            .catch((err) => {
+                console.error("Failed to load confession groups:", err);
+                setGroups([]);
+                setGroupsError(true);
+            })
             .finally(() => setLoadingGroups(false));
     }, []);
 
@@ -57,7 +62,12 @@ export default function ConfessionsPage() {
                     <Typography variant="body1" sx={{ mb: 2 }}>
                         Envie uma confissão anônima, é realmente anonima!
                     </Typography>
-                    {!loadingGroups && groups.length === 0 && (
+                    {!loadingGroups && groupsError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            Não foi possível carregar os grupos. Tente novamente.
+                        </Alert>
+                    )}
+                    {!loadingGroups && !groupsError && groups.length === 0 && (
                         <Alert severity="info" sx={{ mb: 2 }}>
                             Nenhum grupo está aceitando confissões no momento.
                         </Alert>
