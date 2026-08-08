@@ -31,10 +31,14 @@ const BROADCAST_VALUE = "__broadcast__";
 
 export default function EventsPage() {
     const { data: events, mutate, isValidating } = useSWR("events", fetcher);
-    const { hasRole } = useAuth();
+    const { hasRole, user } = useAuth();
     const isSuperAdmin = hasRole("super_admin");
-    const { data: myGroups, isLoading: myGroupsLoading } = useSWR("my-groups", () =>
-        api.getMyGroups()
+    // /events is a public page reachable while logged out — key the fetch on
+    // `user` (same pattern Layout.js uses) so anonymous visitors never fire
+    // this authenticated-only endpoint and hit an infinite 401 retry loop.
+    const { data: myGroups, isLoading: myGroupsLoading } = useSWR(
+        user ? "my-groups" : null,
+        () => api.getMyGroups()
     );
 
     const { eligible, needsPicker, singleGroupId, canBroadcastGlobally } =
@@ -48,7 +52,12 @@ export default function EventsPage() {
 
     const isSubmitting = status.type === "loading";
     const noEligibleGroups = !myGroupsLoading && eligible.length === 0;
-    const formDisabled = isSubmitting || myGroupsLoading || noEligibleGroups;
+    // A super_admin can always fall back to broadcasting globally, even with
+    // zero (or one) eligible groups, so `noEligibleGroups` alone must not
+    // block/disable the form for them.
+    const blockedByNoGroups = noEligibleGroups && !canBroadcastGlobally;
+    const showGroupPicker = needsPicker || canBroadcastGlobally;
+    const formDisabled = isSubmitting || myGroupsLoading || blockedByNoGroups;
 
     function handleGroupSelectChange(e) {
         const value = e.target.value;
@@ -81,7 +90,7 @@ export default function EventsPage() {
             setStatus({ type: "error", message: "Preencha nome e data" });
             return;
         }
-        if (noEligibleGroups) {
+        if (blockedByNoGroups) {
             setStatus({
                 type: "error",
                 message: "Você não administra nenhum grupo com eventos habilitados.",
@@ -91,12 +100,19 @@ export default function EventsPage() {
 
         let broadcast = false;
         let targetGroupIds = [];
-        if (needsPicker) {
+        if (showGroupPicker) {
             if (selectedGroupIds.includes(BROADCAST_VALUE)) {
                 broadcast = true;
             } else if (selectedGroupIds.length === 0) {
-                setStatus({ type: "error", message: "Selecione ao menos um grupo" });
-                return;
+                if (!needsPicker && singleGroupId) {
+                    // Picker is only showing because the user can broadcast
+                    // (0 or 1 real eligible groups) and they didn't tick
+                    // anything — fall back to the single eligible group.
+                    targetGroupIds = [singleGroupId];
+                } else {
+                    setStatus({ type: "error", message: "Selecione ao menos um grupo" });
+                    return;
+                }
             } else {
                 targetGroupIds = selectedGroupIds;
             }
@@ -186,13 +202,14 @@ export default function EventsPage() {
     return (
         <Layout title="Eventos">
             <Grid container spacing={3}>
+                {user && (
                 <Grid item xs={12} md={5}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
                                 Novo evento
                             </Typography>
-                            {noEligibleGroups && (
+                            {blockedByNoGroups && (
                                 <Alert severity="warning" sx={{ mb: 2 }}>
                                     Você não administra nenhum grupo com eventos
                                     habilitados.
@@ -221,7 +238,7 @@ export default function EventsPage() {
                                     InputLabelProps={{ shrink: true }}
                                     disabled={formDisabled}
                                 />
-                                {needsPicker && (
+                                {showGroupPicker && (
                                     <FormControl fullWidth disabled={formDisabled}>
                                         <InputLabel id="event-groups-label">
                                             Grupos
@@ -259,7 +276,7 @@ export default function EventsPage() {
                                         </Select>
                                     </FormControl>
                                 )}
-                                {!needsPicker && eligible.length === 1 && (
+                                {!showGroupPicker && eligible.length === 1 && (
                                     <Typography variant="caption" color="text.secondary">
                                         Grupo: {eligible[0].name || eligible[0].id}
                                     </Typography>
@@ -278,8 +295,9 @@ export default function EventsPage() {
                         {isSubmitting && <LinearProgress />}
                     </Card>
                 </Grid>
+                )}
 
-                <Grid item xs={12} md={7}>
+                <Grid item xs={12} md={user ? 7 : 12}>
                     <Card>
                         <CardContent>
                             <Stack

@@ -23,6 +23,12 @@ import { resolvePickerGroups } from "../lib/groupPicker";
 // PersonaConfig.groupId is nullable and the null row is the deliberate
 // global-fallback persona — only super_admin gets to view/edit it.
 const GLOBAL_OPTION = { id: null, name: "Padrão global (fallback)" };
+// MUI's <Select>/<FormControl> treats a `null` value as "empty" for
+// label-shrink purposes, which makes the "Grupo" label overlap the option
+// text when the global fallback is selected. Use a sentinel string as the
+// Select's actual value and map it to/from real `null` at the boundary
+// (same technique as BROADCAST_VALUE in the Events/Schedules pickers).
+const GLOBAL_VALUE = "__global__";
 
 export default function PersonaPage() {
     const [sessionOk, setSessionOk] = useState(true);
@@ -156,11 +162,18 @@ export default function PersonaPage() {
                                 <Select
                                     labelId="persona-group-label"
                                     label="Grupo"
-                                    value={selectedGroupId}
-                                    onChange={(e) => handleGroupSwitch(e.target.value)}
+                                    value={selectedGroupId === null ? GLOBAL_VALUE : selectedGroupId}
+                                    onChange={(e) =>
+                                        handleGroupSwitch(
+                                            e.target.value === GLOBAL_VALUE ? null : e.target.value
+                                        )
+                                    }
                                 >
                                     {options.map((opt) => (
-                                        <MenuItem key={opt.id ?? "__global__"} value={opt.id}>
+                                        <MenuItem
+                                            key={opt.id ?? GLOBAL_VALUE}
+                                            value={opt.id === null ? GLOBAL_VALUE : opt.id}
+                                        >
                                             {opt.name}
                                         </MenuItem>
                                     ))}

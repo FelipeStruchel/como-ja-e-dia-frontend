@@ -118,9 +118,14 @@ export default function SchedulesPage() {
 
     const isSubmitting = status.type === "loading";
     const noEligibleGroups = !myGroupsLoading && eligible.length === 0;
+    // A super_admin can always fall back to broadcasting globally, even with
+    // zero (or one) eligible groups, so `noEligibleGroups` alone must not
+    // block/disable the form for them.
+    const blockedByNoGroups = noEligibleGroups && !canBroadcastGlobally;
+    const showGroupPicker = needsPicker || canBroadcastGlobally;
     // The group picker only governs *creating* a new schedule (which group(s)
     // it applies to); editing an existing schedule doesn't touch its group.
-    const formDisabled = isSubmitting || (!editingId && (myGroupsLoading || noEligibleGroups));
+    const formDisabled = isSubmitting || (!editingId && (myGroupsLoading || blockedByNoGroups));
 
     function handleGroupSelectChange(e) {
         const value = e.target.value;
@@ -172,7 +177,7 @@ export default function SchedulesPage() {
     async function handleSave(e) {
         e?.preventDefault();
 
-        if (!editingId && noEligibleGroups) {
+        if (!editingId && blockedByNoGroups) {
             setStatus({
                 type: "error",
                 message: "Você não administra nenhum grupo com saudações agendadas habilitadas.",
@@ -183,12 +188,20 @@ export default function SchedulesPage() {
         let broadcast = false;
         let targetGroupIds = [];
         if (!editingId) {
-            if (needsPicker) {
+            if (showGroupPicker) {
                 if (selectedGroupIds.includes(BROADCAST_VALUE)) {
                     broadcast = true;
                 } else if (selectedGroupIds.length === 0) {
-                    setStatus({ type: "error", message: "Selecione ao menos um grupo" });
-                    return;
+                    if (!needsPicker && singleGroupId) {
+                        // Picker is only showing because the user can
+                        // broadcast (0 or 1 real eligible groups) and they
+                        // didn't tick anything — fall back to the single
+                        // eligible group.
+                        targetGroupIds = [singleGroupId];
+                    } else {
+                        setStatus({ type: "error", message: "Selecione ao menos um grupo" });
+                        return;
+                    }
                 } else {
                     targetGroupIds = selectedGroupIds;
                 }
@@ -364,13 +377,13 @@ export default function SchedulesPage() {
                                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                                     required
                                 />
-                                {!editingId && noEligibleGroups && (
+                                {!editingId && blockedByNoGroups && (
                                     <Alert severity="warning">
                                         Você não administra nenhum grupo com saudações
                                         agendadas habilitadas.
                                     </Alert>
                                 )}
-                                {!editingId && needsPicker && (
+                                {!editingId && showGroupPicker && (
                                     <Stack spacing={1}>
                                         <FormControl fullWidth disabled={formDisabled}>
                                             <InputLabel id="schedule-groups-label">
@@ -420,7 +433,7 @@ export default function SchedulesPage() {
                                         )}
                                     </Stack>
                                 )}
-                                {!editingId && !needsPicker && eligible.length === 1 && (
+                                {!editingId && !showGroupPicker && eligible.length === 1 && (
                                     <Typography variant="caption" color="text.secondary">
                                         Grupo: {eligible[0].name || eligible[0].id}
                                     </Typography>
@@ -685,23 +698,25 @@ export default function SchedulesPage() {
                                 <Typography variant="h6">Agendamentos</Typography>
                                 <Stack direction="row" spacing={1} alignItems="center">
                                     <Chip label={schedules ? schedules.length : 0} color="secondary" size="small" />
-                                    <Button
-                                        size="small"
-                                        variant="outlined"
-                                        onClick={() =>
-                                            api
-                                                .resyncSchedules()
-                                                .then(() => setStatus({ type: "success", message: "Resync solicitado" }))
-                                                .catch((err) =>
-                                                    setStatus({
-                                                        type: "error",
-                                                        message: err?.message || "Erro no resync",
-                                                    })
-                                                )
-                                        }
-                                    >
-                                        Resync
-                                    </Button>
+                                    {isSuperAdmin && (
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() =>
+                                                api
+                                                    .resyncSchedules()
+                                                    .then(() => setStatus({ type: "success", message: "Resync solicitado" }))
+                                                    .catch((err) =>
+                                                        setStatus({
+                                                            type: "error",
+                                                            message: err?.message || "Erro no resync",
+                                                        })
+                                                    )
+                                            }
+                                        >
+                                            Resync
+                                        </Button>
+                                    )}
                                 </Stack>
                             </Stack>
                             {loading && <Typography>Carregando...</Typography>}
