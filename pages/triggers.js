@@ -70,6 +70,7 @@ const RESP_TYPES = [
     { value: "text",  icon: "💬", label: "Texto" },
     { value: "image", icon: "🖼️", label: "Imagem" },
     { value: "video", icon: "🎬", label: "Vídeo" },
+    { value: "echo",  icon: "🔁", label: "Eco" },
 ];
 
 const BEHAVIOR_FLAGS = [
@@ -468,7 +469,17 @@ function TriggerForm({
                         <ToggleButtonGroup
                             value={form.matchType}
                             exclusive
-                            onChange={(_, val) => val && setForm((p) => ({ ...p, matchType: val }))}
+                            onChange={(_, val) =>
+                                val &&
+                                setForm((p) => ({
+                                    ...p,
+                                    matchType: val,
+                                    responseType:
+                                        val === "exact" && p.responseType === "echo"
+                                            ? "text"
+                                            : p.responseType,
+                                }))
+                            }
                             fullWidth
                             size="small"
                             sx={{
@@ -528,7 +539,9 @@ function TriggerForm({
                             Tipo de resposta
                         </Typography>
                         <Grid container spacing={1}>
-                            {RESP_TYPES.map((rt) => (
+                            {RESP_TYPES.filter(
+                                (rt) => rt.value !== "echo" || form.matchType !== "exact"
+                            ).map((rt) => (
                                 <Grid item xs={4} key={rt.value}>
                                     <Box
                                         onClick={() => setForm((p) => ({ ...p, responseType: rt.value }))}
@@ -580,6 +593,17 @@ function TriggerForm({
                             onChange={(e) => setForm((p) => ({ ...p, responseText: e.target.value }))}
                             size="small"
                             fullWidth
+                        />
+                    ) : form.responseType === "echo" ? (
+                        <TextField
+                            label="Texto que substitui o trecho encontrado"
+                            multiline
+                            minRows={2}
+                            value={form.responseText}
+                            onChange={(e) => setForm((p) => ({ ...p, responseText: e.target.value }))}
+                            size="small"
+                            fullWidth
+                            helperText="Troca só o trecho que bateu no gatilho; o resto da mensagem original é mantido."
                         />
                     ) : (
                         <Stack spacing={1}>
