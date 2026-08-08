@@ -108,6 +108,15 @@ export default function SchedulesPage() {
     const [status, setStatus] = useState({ type: "idle", message: "" });
     const [uploading, setUploading] = useState(false);
     const [selectedGroupIds, setSelectedGroupIds] = useState([]);
+    // Only super_admin can reassign an existing schedule's group (see PUT
+    // /schedules/:id) — this tracks that selection separately from the
+    // create-mode multi-select above, since editing targets exactly one group.
+    const [editGroupId, setEditGroupId] = useState(null);
+
+    function groupLabel(groupId) {
+        if (!groupId) return "Todos os grupos";
+        return (myGroups || []).find((g) => g.id === groupId)?.name || groupId;
+    }
 
     useEffect(() => {
         api.me()
@@ -214,10 +223,15 @@ export default function SchedulesPage() {
             setStatus({ type: "loading", message: "Salvando..." });
 
             if (editingId) {
-                // Editing an existing schedule doesn't reassign its group.
-                await api.updateSchedule(editingId, parsedForm);
+                // Only super_admin may reassign an existing schedule's group
+                // (the backend silently ignores groupId from anyone else).
+                const payload = isSuperAdmin
+                    ? { ...parsedForm, groupId: editGroupId }
+                    : parsedForm;
+                await api.updateSchedule(editingId, payload);
                 setForm(emptyForm);
                 setEditingId(null);
+                setEditGroupId(null);
                 await mutate();
                 setStatus({ type: "success", message: "Agendamento salvo" });
                 return;
@@ -283,6 +297,7 @@ export default function SchedulesPage() {
 
     function handleEdit(s) {
         setEditingId(s.id);
+        setEditGroupId(s.groupId ?? null);
         setForm({
             name: s.name || "",
             type: s.type || "image",
@@ -436,6 +451,35 @@ export default function SchedulesPage() {
                                 {!editingId && !showGroupPicker && eligible.length === 1 && (
                                     <Typography variant="caption" color="text.secondary">
                                         Grupo: {eligible[0].name || eligible[0].id}
+                                    </Typography>
+                                )}
+                                {editingId && isSuperAdmin && (
+                                    <FormControl fullWidth>
+                                        <InputLabel id="schedule-edit-group-label">Grupo</InputLabel>
+                                        <Select
+                                            labelId="schedule-edit-group-label"
+                                            label="Grupo"
+                                            value={editGroupId === null ? BROADCAST_VALUE : editGroupId}
+                                            onChange={(e) =>
+                                                setEditGroupId(
+                                                    e.target.value === BROADCAST_VALUE ? null : e.target.value
+                                                )
+                                            }
+                                        >
+                                            <MenuItem value={BROADCAST_VALUE}>
+                                                Todos os grupos (atual e futuros)
+                                            </MenuItem>
+                                            {(myGroups || []).map((g) => (
+                                                <MenuItem key={g.id} value={g.id}>
+                                                    {g.name || g.id}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                )}
+                                {editingId && !isSuperAdmin && (
+                                    <Typography variant="caption" color="text.secondary">
+                                        Grupo: {groupLabel(editGroupId)}
                                     </Typography>
                                 )}
                                 <FormControl fullWidth>
@@ -662,6 +706,7 @@ export default function SchedulesPage() {
                                             variant="text"
                                             onClick={() => {
                                                 setEditingId(null);
+                                                setEditGroupId(null);
                                                 setForm(emptyForm);
                                             }}
                                         >
@@ -740,6 +785,9 @@ export default function SchedulesPage() {
                                                     size="small"
                                                 />
                                             </Stack>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Grupo: {groupLabel(s.groupId)}
+                                            </Typography>
                                             <Typography variant="body2" color="text.secondary">
                                                 Tipo: {s.type} | Cron: {s.cron} | TZ: {s.timezone}
                                             </Typography>
