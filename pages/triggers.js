@@ -143,7 +143,7 @@ function TriggerTags({ trigger }) {
         color: "primary.dark",
     });
 
-    const respLabels = { text: "💬 texto", image: "🖼️ imagem", video: "🎬 vídeo" };
+    const respLabels = { text: "💬 texto", image: "🖼️ imagem", video: "🎬 vídeo", echo: "🔁 eco" };
     tags.push({
         label: respLabels[trigger.responseType] || trigger.responseType,
         bgcolor: "grey.100",
@@ -540,7 +540,7 @@ function TriggerForm({
                         </Typography>
                         <Grid container spacing={1}>
                             {RESP_TYPES.filter(
-                                (rt) => rt.value !== "echo" || form.matchType !== "exact"
+                                (rt) => rt.value !== "echo" || ["contains", "regex"].includes(form.matchType)
                             ).map((rt) => (
                                 <Grid item xs={4} key={rt.value}>
                                     <Box
