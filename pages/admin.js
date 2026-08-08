@@ -13,6 +13,11 @@ import {
     FormGroup,
     LinearProgress,
     Chip,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Button,
 } from "@mui/material";
 import Layout from "../components/Layout";
 import WhatsAppStatus from "../components/WhatsAppStatus";
@@ -24,8 +29,10 @@ export default function AdminPage() {
     const router = useRouter();
     const [users, setUsers] = useState([]);
     const [availableRoles, setAvailableRoles] = useState([]);
+    const [groups, setGroups] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [userError, setUserError] = useState("");
+    const [pendingGroupByUser, setPendingGroupByUser] = useState({});
 
     useEffect(() => {
         if (!loading && user && !hasRole("super_admin")) {
@@ -39,10 +46,11 @@ export default function AdminPage() {
     useEffect(() => {
         if (!user || !hasRole("super_admin")) return;
         setLoadingUsers(true);
-        Promise.all([api.listUsers(), api.listRoles()])
-            .then(([usersData, rolesData]) => {
+        Promise.all([api.listUsers(), api.listRoles(), api.getGroups()])
+            .then(([usersData, rolesData, groupsData]) => {
                 setUsers(usersData || []);
                 setAvailableRoles(rolesData || []);
+                setGroups(groupsData || []);
                 setUserError("");
             })
             .catch((err) => setUserError(err?.message || "Erro ao carregar dados"))
@@ -75,6 +83,31 @@ export default function AdminPage() {
                 )
             );
         }
+    }
+
+    async function handleAddGroupAdmin(u) {
+        const groupId = pendingGroupByUser[u.id];
+        if (!groupId) return;
+        await api.addGroupAdmin(groupId, u.email);
+        setUsers((prev) =>
+            prev.map((it) =>
+                it.id === u.id
+                    ? { ...it, adminGroupIds: [...(it.adminGroupIds || []), groupId] }
+                    : it
+            )
+        );
+        setPendingGroupByUser((prev) => ({ ...prev, [u.id]: "" }));
+    }
+
+    async function handleRemoveGroupAdmin(userId, groupId) {
+        await api.removeGroupAdmin(groupId, userId);
+        setUsers((prev) =>
+            prev.map((it) =>
+                it.id === userId
+                    ? { ...it, adminGroupIds: (it.adminGroupIds || []).filter((id) => id !== groupId) }
+                    : it
+            )
+        );
     }
 
     if (loading || !user) return null;
@@ -147,6 +180,59 @@ export default function AdminPage() {
                                                     />
                                                 ))}
                                             </FormGroup>
+                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                                                Admin de grupo
+                                            </Typography>
+                                            <Stack direction="row" flexWrap="wrap" spacing={1}>
+                                                {(u.adminGroupIds || []).map((groupId) => {
+                                                    const group = groups.find((g) => g.id === groupId);
+                                                    return (
+                                                        <Chip
+                                                            key={groupId}
+                                                            label={group?.name || groupId}
+                                                            size="small"
+                                                            onDelete={() => handleRemoveGroupAdmin(u.id, groupId)}
+                                                        />
+                                                    );
+                                                })}
+                                                {(u.adminGroupIds || []).length === 0 && (
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Nenhum grupo
+                                                    </Typography>
+                                                )}
+                                            </Stack>
+                                            <Stack direction="row" spacing={1}>
+                                                <FormControl size="small" sx={{ minWidth: 180 }}>
+                                                    <InputLabel id={`add-group-${u.id}`}>Adicionar grupo</InputLabel>
+                                                    <Select
+                                                        labelId={`add-group-${u.id}`}
+                                                        label="Adicionar grupo"
+                                                        value={pendingGroupByUser[u.id] || ""}
+                                                        onChange={(e) =>
+                                                            setPendingGroupByUser((prev) => ({
+                                                                ...prev,
+                                                                [u.id]: e.target.value,
+                                                            }))
+                                                        }
+                                                    >
+                                                        {groups
+                                                            .filter((g) => !(u.adminGroupIds || []).includes(g.id))
+                                                            .map((g) => (
+                                                                <MenuItem key={g.id} value={g.id}>
+                                                                    {g.name || g.id}
+                                                                </MenuItem>
+                                                            ))}
+                                                    </Select>
+                                                </FormControl>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    onClick={() => handleAddGroupAdmin(u)}
+                                                    disabled={!pendingGroupByUser[u.id]}
+                                                >
+                                                    Adicionar
+                                                </Button>
+                                            </Stack>
                                         </Stack>
                                     </Stack>
                                 </CardContent>
